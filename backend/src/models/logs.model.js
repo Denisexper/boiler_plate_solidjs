@@ -13,6 +13,16 @@ const logSchema = new Schema ({
     resource: {
         type: String
     },
+    //Usuario afectado por la acción qeu se le hizo
+    targetUser: {
+        type: Schema.Types.ObjectId,
+        ref: 'userModel',
+        default: null
+    },
+    targetUserName: {
+        type: String,
+        default: null
+    },
     details: {
         type: String
     },
@@ -21,6 +31,9 @@ const logSchema = new Schema ({
     },
     userAgent: {
         type: String
+    },
+    statusCode: {
+        type: Number
     }
 }, { timestamps: true });
 

@@ -19,10 +19,11 @@ const userSchema = new Schema({
         required: [true, 'La contraseña es obligatoria'],
         minlength: [6, 'La contraseña debe tener al menos 6 caracteres']
     },
+    // ✅ SOLO ESTO (sin enum)
     role: {
-        type: String,
-        enum: ['user', 'admin', 'moderator'],
-        default: 'user'
+        type: Schema.Types.ObjectId,
+        ref: 'Role',
+        required: true
     },
     isActive: {
         type: Boolean,
@@ -32,7 +33,7 @@ const userSchema = new Schema({
         type: Date
     }
 }, {
-    timestamps: true // Crear automáticamente createdAt y updatedAt
+    timestamps: true
 });
 
 export const userModel = model('userModel', userSchema);

@@ -2,56 +2,60 @@ import { userModel } from "../models/user.model.js";
 import bcrypt from 'bcrypt'
 import { generateToken } from "../services/jwt.service.js";
 import mongoose from "mongoose";
+import { Log } from "../models/logs.model.js";
+import { Role } from "../models/role.model.js";
 
 export class userController {
 
 
     //register
-    async register (req, res) {
-
+    async register(req, res) {
         try {
-            
             const { name, email, password, role } = req.body;
 
-            //verificamos si el usuario ya esta en uso
             const userExist = await userModel.findOne({ email });
-
-            if(userExist){
+            if (userExist) {
                 return res.status(400).json({
                     msj: 'El email ya esta en uso'
                 })
             }
 
-            //hasheamos la contraseña
             const hasPassword = await bcrypt.hash(password, 10)
 
-            //creamos el nuevo usuario
+            // ✅ CAMBIO: Buscar el rol "user" por defecto
+            const userRole = await Role.findOne({ name: role || 'user' });
+            if (!userRole) {
+                return res.status(400).json({
+                    msj: 'Rol no válido'
+                });
+            }
+
             const newUser = await userModel.create({
                 name,
                 email,
                 password: hasPassword,
-                role: role || 'user'
+                role: userRole._id
             })
 
-            //generamos el token
             const token = generateToken({
                 id: newUser._id,
                 email: newUser.email,
-                role: newUser.role
+                roleId: userRole._id
             })
 
             res.status(201).json({
                 msj: 'usuario registrado exitosamente',
                 token,
-                newUser: { //solo enviamos la informacion necesaria
+                newUser: {
                     id: newUser._id,
                     name: newUser.name,
                     email: newUser.email,
-                    role: newUser.role
+                    role: userRole.name,
+                    roleId: userRole._id,
+                    permissions: userRole.permissions
                 }
             })
         } catch (error) {
-            
             res.status(500).json({
                 msj: 'error al registrar el usuario',
                 error: error.message
@@ -60,52 +64,65 @@ export class userController {
     }
 
     //login
-    async login (req, res) {
+    async login(req, res) {
         try {
-            
             const { email, password } = req.body;
 
-            //buscar el usuario que intenta logear
-            const user = await userModel.findOne({ email })
-            if(!user){
+            const user = await userModel.findOne({ email }).populate('role');
+            if (!user) {
                 return res.status(401).json({
                     msj: 'credenciales invalidas'
                 })
             }
 
-            //verificar la contraseña incriptada
             const isvalidPass = await bcrypt.compare(password, user.password)
-            if(!isvalidPass){
+            if (!isvalidPass) {
                 return res.status(401).json({
                     msj: 'credenciales invalidas'
                 })
             }
 
-            //actualizar ultimo login
             user.lastLogin = new Date();
             await user.save();
 
-            //generamos el token
+            // ✅ CAMBIO: Incluir roleId en el token
             const token = generateToken({
                 id: user._id,
                 email: user.email,
-                role: user.role
+                roleId: user.role._id // ObjectId del rol
             })
+
+            // Log de login
+            try {
+                await Log.create({
+                    user: user._id,
+                    action: 'login',
+                    resource: 'auth',
+                    targetUser: user._id,
+                    targetUserName: user.name,
+                    details: `Login exitoso`,
+                    ipAddress: req.ip,
+                    userAgent: req.get('user-agent'),
+                    statusCode: 200
+                });
+            } catch (error) {
+                console.error('Error creating login log:', error);
+            }
 
             res.status(200).json({
                 msj: 'Login exitoso',
                 token,
-                user: { //solo enviamos la informacion necesaria y no todo el objeto de mongo
+                user: {
                     id: user._id,
                     name: user.name,
                     email: user.email,
-                    role: user.role
+                    role: user.role.name, // Nombre del rol para el frontend
+                    roleId: user.role._id,
+                    permissions: user.role.permissions
                 }
             })
 
-
         } catch (error) {
-            
             res.status(500).json({
                 msj: 'error en el login',
                 error: error.message
@@ -113,41 +130,74 @@ export class userController {
         }
     }
 
-    //crear un usuario, ruta protegida para admins
-    async createUser (req, res) {
+    // Logout
+    async logout(req, res) {
         try {
-            
+            // Crear log de logout
+            await Log.create({
+                user: req.user.id,
+                action: 'logout',
+                resource: 'auth',
+                targetUser: req.user.id,
+                targetUserName: req.user.name || 'Usuario',
+                details: `Logout exitoso`,
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent'),
+                statusCode: 200
+            });
+
+            res.status(200).json({
+                msj: 'Logout exitoso'
+            });
+        } catch (error) {
+            res.status(500).json({
+                msj: 'error en el logout',
+                error: error.message
+            })
+        }
+    }
+
+    //crear un usuario, ruta protegida para admins
+    async createUser(req, res) {
+        try {
             const { name, email, password, role } = req.body;
 
-            //buscamos si el email ya esta en uso
             const emailExis = await userModel.findOne({ email })
-
-            //validamos
-            if(emailExis){
+            if (emailExis) {
                 return res.status(400).json({
                     msj: 'email ya esta en uso'
                 })
             }
 
-            //hashear password
             const hasPassword = await bcrypt.hash(password, 10)
 
-            //crear el nuevo usuario
+            // ✅ CAMBIO: Buscar rol por nombre o por ID
+            let roleDoc;
+            if (mongoose.Types.ObjectId.isValid(role)) {
+                roleDoc = await Role.findById(role);
+            } else {
+                roleDoc = await Role.findOne({ name: role || 'user' });
+            }
+
+            if (!roleDoc) {
+                return res.status(400).json({
+                    msj: 'Rol no válido'
+                });
+            }
+
             const newUser = await userModel.create({
                 name,
                 email,
                 password: hasPassword,
-                role: role || 'user'
+                role: roleDoc._id
             })
 
-            //generamos el token
             const token = generateToken({
                 id: newUser._id,
                 email: newUser.email,
-                role: newUser.role
+                roleId: roleDoc._id
             })
 
-            //respondemos la peticion
             res.status(201).json({
                 msj: 'user creado exitosamente',
                 token,
@@ -155,7 +205,8 @@ export class userController {
                     id: newUser._id,
                     name: newUser.name,
                     email: newUser.email,
-                    role: newUser.role
+                    role: roleDoc.name,
+                    roleId: roleDoc._id
                 }
             })
         } catch (error) {
@@ -168,15 +219,15 @@ export class userController {
     }
 
     //obtener un usuario por id
-    async getUser (req, res) {
+    async getUser(req, res) {
 
         const { id } = req.params;
 
         try {
-            
-            const response = await userModel.findById(id)
 
-            if(!response){
+            const response = await userModel.findById(id).populate('role')
+
+            if (!response) {
                 return res.status(404).json({
                     msj: 'usuario no encontrado'
                 })
@@ -187,7 +238,7 @@ export class userController {
                 data: response
             })
         } catch (error) {
-            
+
             res.status(500).json({
                 msj: 'error del servidor',
                 error: error.message
@@ -196,14 +247,15 @@ export class userController {
     }
 
     //obtener todos los usuarios
-    async getAll (req, res) {
+    async getAll(req, res) {
 
         try {
-            
+
             //buscamos todos los registros en la db
             const response = await userModel.find()
+                .populate('role')
                 .select('-passowrd') //para no mostrar la password
-                .sort({ createdAt: -1}) //los ordenamos del mas reciente al mas viejo
+                .sort({ createdAt: -1 }) //los ordenamos del mas reciente al mas viejo
 
             //respondemos la peticion
             res.status(200).json({
@@ -214,7 +266,7 @@ export class userController {
                 data: response
             })
         } catch (error) {
-            
+
             res.status(500).json({
                 msj: 'error del servidor',
                 error: error.message
@@ -224,9 +276,9 @@ export class userController {
 
     //actualizar un usuario por id
 
-    async updateUser (req, res) {
+    async updateUser(req, res) {
         try {
-            
+
             //obtenemos el id de los parametros
             const { id } = req.params;
 
@@ -234,7 +286,7 @@ export class userController {
             const { name, email, password, role } = req.body;
 
             //validamos si es un id valido de mongodb
-            if(!mongoose.Types.ObjectId.isValid(id)) {
+            if (!mongoose.Types.ObjectId.isValid(id)) {
                 return res.status(400).json({
                     msj: 'Id no valido'
                 })
@@ -243,16 +295,16 @@ export class userController {
             //buscamos si el usuario existe
             const user = await userModel.findById(id)
 
-            if(!user) {
+            if (!user) {
                 return res.status(404).json({
                     msj: 'usuario no encontrado'
                 })
             }
 
             //verificamos si el email ya existe (solo si va en la petion)
-            if(email && email !== user.email) {
+            if (email && email !== user.email) {
                 const emailExist = await userModel.findOne({ email })
-                if(emailExist) {
+                if (emailExist) {
                     return res.status(400).json({
                         msj: 'el email ya esta en uso'
                     })
@@ -263,12 +315,12 @@ export class userController {
 
             const rightData = {}
 
-            if(name) rightData.name = name
-            if(email) rightData.email = email
+            if (name) rightData.name = name
+            if (email) rightData.email = email
 
             // validar y hashear la contraseña nueva
-            if(password) {
-                if(password.length < 6) {
+            if (password) {
+                if (password.length < 6) {
                     return res.status(400).json({
                         msj: 'la contraseña debe tener al menos 6 caracteres'
                     })
@@ -278,8 +330,8 @@ export class userController {
             }
 
             //solo permitir actualizar si el usuario actual es admin
-            if(role) {
-                if(req.user.role !== 'admin') {
+            if (role) {
+                if (req.user.role !== 'admin') {
                     return res.status(403).json({
                         msj: 'no tienes permiso para cambiar roles'
                     })
@@ -307,10 +359,10 @@ export class userController {
                     email: updateUser.email,
                     role: updateUser.role
                 }
-                
+
             })
         } catch (error) {
-            
+
             res.status(500).json({
                 msj: 'error actualizando usuario',
                 error: error.message
@@ -319,20 +371,20 @@ export class userController {
     }
 
     //eliminar usuarios
-    async deleteUser (req, res) {
+    async deleteUser(req, res) {
         try {
-            
+
             //obtenemos id de los parametros de la url
             const { id } = req.params;
 
             //verificamos si el id de mongo es valido
-            if(!mongoose.Types.ObjectId.isValid(id)) {
+            if (!mongoose.Types.ObjectId.isValid(id)) {
                 return res.status(400).json({
                     msj: 'el id no es valido'
                 })
             }
             //verificamos que tenga rol permitido para eliminar usuarios
-            if(req.user.role !== 'admin') {
+            if (req.user.role !== 'admin') {
 
                 return res.status(403).json({
 
@@ -341,7 +393,7 @@ export class userController {
             }
 
             //evitamos que el admin se suicide
-            if(id === req.user.id){
+            if (id === req.user.id) {
 
                 return res.status(400).json({
 
@@ -352,7 +404,7 @@ export class userController {
             const deleteUser = await userModel.findByIdAndDelete(id)
 
             //validamos si se encontro el usuario
-            if(!deleteUser){
+            if (!deleteUser) {
                 return res.status(404).json({
                     msj: 'usuario no encontrado'
                 })
@@ -369,7 +421,7 @@ export class userController {
                 }
             })
         } catch (error) {
-            
+
             res.status(500).json({
                 msj: 'error eliminando usuario',
                 error: error.message
@@ -377,5 +429,41 @@ export class userController {
         }
     }
 
-    
+    // Obtener perfil del usuario autenticado (no requiere permisos especiales)
+async getMe(req, res) {
+    try {
+        // req.user viene del authMiddleware con todos los datos
+        const user = await userModel.findById(req.user.id)
+            .populate('role')
+            .select('-password'); // No enviar la contraseña
+
+        if (!user) {
+            return res.status(404).json({
+                msj: 'usuario no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            msj: 'perfil obtenido',
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role.name,
+                roleId: user.role._id,
+                permissions: user.role.permissions,
+                isActive: user.isActive,
+                lastLogin: user.lastLogin,
+                createdAt: user.createdAt
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            msj: 'error del servidor',
+            error: error.message
+        });
+    }
+}
+
+
 }

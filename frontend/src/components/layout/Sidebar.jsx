@@ -1,6 +1,6 @@
 import { A, useNavigate } from '@solidjs/router';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { api } from '../../services/api';
 import ThemeToggle from '../ThemeToggle';
 import { Show } from 'solid-js';
 
@@ -8,7 +8,12 @@ function Sidebar() {
   const auth = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } catch (error) {
+      console.error('Error en logout:', error);
+    }
     auth.logout();
     navigate('/login');
   };
@@ -38,7 +43,7 @@ function Sidebar() {
       {/* Navegacion */}
       <nav class="flex-1 px-3 py-4 space-y-1">
 
-        {/* Todos los roles */}
+        {/* Dashboard - Todos los usuarios autenticados */}
         <A href="/dashboard" class={navLinkClass('/dashboard')}>
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -47,8 +52,8 @@ function Sidebar() {
           Dashboard
         </A>
 
-        {/* Solo admin */}
-        <Show when={auth.isAdmin()}>
+        {/* ✅ CAMBIO: Mostrar según PERMISOS, no por rol */}
+        <Show when={auth.hasPermission('users.read') || auth.hasPermission('users.create') || auth.hasPermission('users.update')}>
           <div class="pt-4 pb-1">
             <p class="px-4 text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
               Administración
@@ -64,8 +69,19 @@ function Sidebar() {
           </A>
         </Show>
 
-        {/* Admin y moderador */}
-        <Show when={auth.isModerator()}>
+        {/* ✅ Roles - Solo si tiene permiso */}
+        <Show when={auth.hasPermission('roles.read')}>
+          <A href="/roles" class={navLinkClass('/roles')}>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Roles y Permisos
+          </A>
+        </Show>
+
+        {/* ✅ Logs - Solo si tiene permiso */}
+        <Show when={auth.hasPermission('logs.read')}>
           <A href="/logs" class={navLinkClass('/logs')}>
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

@@ -1,8 +1,8 @@
 import { verifyToken } from "../services/jwt.service.js";
+import { Role } from "../models/role.model.js";
 
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
     try {
-        
         //obtenemos el token del header de la peticion
         const authHeader = req.headers.authorization;
 
@@ -25,7 +25,24 @@ export const authMiddleware = (req, res, next) => {
             })
         }
 
-        req.user = decode;
+        // ✅ NUEVO: Cargar el rol y sus permisos
+        const userRole = await Role.findById(decode.roleId);
+        
+        if (!userRole) {
+            return res.status(403).json({
+                msj: 'Rol no encontrado'
+            });
+        }
+
+        // ✅ Agregar toda la información al request
+        req.user = {
+            id: decode.id,
+            email: decode.email,
+            roleId: decode.roleId,
+            role: userRole.name, // Nombre del rol (admin, user, etc.)
+            permissions: userRole.permissions // Array de permisos
+        };
+
         next()
     } catch (error) {
         res.status(500).json({

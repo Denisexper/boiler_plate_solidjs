@@ -22,7 +22,8 @@ export const logsReports = async (req, res) => {
         //buscamos la lista de los logs
         const logs = await Log.find(filter)
             .select('-__v') //eliminamos esta propiedad del objeto
-            .populate('user', 'name email role') //hacer el join con el usuario y nos muestre sus campos no solo el id
+            .populate('user', 'name email role')
+            .populate('targetUser', 'name email role') //hacer el join con el usuario y nos muestre sus campos no solo el id
             .sort({ createdAt: -1}) //ordenamos del mas reciente al mas viejo
             .limit(100); //limite de objetos de 100
             

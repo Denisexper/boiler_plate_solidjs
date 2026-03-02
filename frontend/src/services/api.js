@@ -19,7 +19,7 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const token = this.getToken();
-    
+
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -51,12 +51,16 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
+
     if (data.token) {
       this.setToken(data.token);
     }
-    
+
     return data;
+  }
+
+  async getMe() {
+    return this.request('/me');
   }
 
   async register(name, email, password, role = 'user') {
@@ -64,12 +68,18 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ name, email, password, role }),
     });
-    
+
     if (data.token) {
       this.setToken(data.token);
     }
-    
+
     return data;
+  }
+
+  async logout() {
+    return this.request('/logout', {
+      method: 'POST'
+    });
   }
 
   // Users
@@ -110,6 +120,39 @@ class ApiService {
   async deleteLog(id) {
     return this.request(`/logs/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // ✅ NUEVO: Roles
+  async getRoles() {
+    return this.request('/roles');
+  }
+
+  async getRole(id) {
+    return this.request(`/roles/${id}`);
+  }
+
+  async getPermissions() {
+    return this.request('/roles/permissions');
+  }
+
+  async createRole(roleData) {
+    return this.request('/roles', {
+      method: 'POST',
+      body: JSON.stringify(roleData)
+    });
+  }
+
+  async updateRole(id, roleData) {
+    return this.request(`/roles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(roleData)
+    });
+  }
+
+  async deleteRole(id) {
+    return this.request(`/roles/${id}`, {
+      method: 'DELETE'
     });
   }
 }

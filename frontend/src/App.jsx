@@ -8,6 +8,7 @@ const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Users    = lazy(() => import('./pages/Users'));
 const Logs     = lazy(() => import('./pages/Logs'));
+const Roles = lazy(() => import('./pages/Roles'));
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/users"     component={Users} />
           <Route path="/logs"      component={Logs} />
+          <Route path="/roles" component={Roles} /> 
           <Route path="/"          component={Login} />
         </SolidRouter>
       </AuthProvider>

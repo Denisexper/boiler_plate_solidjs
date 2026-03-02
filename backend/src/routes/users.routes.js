@@ -1,39 +1,36 @@
 import { Router } from 'express'
 import { userController } from '../controllers/user.controller.js'
 import { authMiddleware } from '../middleware/auth.middleware.js'
-import { checkRole } from '../middleware/role.middleware.js'
+import { checkPermission } from '../middleware/role.middleware.js'
 import { logAction } from '../middleware/logger.middleware.js'
-import { logsReports, deleteLogs } from '../controllers/logs.controller.js'
+import { logsReports, deleteLogs } from '../controllers/logs.controller.js' 
+import { PERMISSIONS } from '../db/seedRoles.js'
 
 const router = Router()
-
 const controller = new userController()
 
 //ruta del login y register (rutas publicas)
 router.post('/login', controller.login)
 router.post('/register', controller.register)
 
+//ruta protegida logout
+router.post('/logout', authMiddleware, controller.logout)
 
-//rutas solo para administradores
-//obtener todos los usuarios
-router.get('/users', authMiddleware, checkRole('admin'), controller.getAll)
+router.get('/me', authMiddleware, controller.getMe)
 
-//crear un usuario (administradores y moderator)
-router.post('/users', authMiddleware, logAction('create', 'users'), controller.createUser)
+// ✅ RUTAS CON PERMISOS
+router.get('/users', authMiddleware, checkPermission(PERMISSIONS.USERS_READ), controller.getAll)
 
-//rutas portegidas obtener un usuario por id(authenticacion-no check-role para estas ruta)
-router.get('/users/:id', authMiddleware, logAction('read', 'users'), controller.getUser)
+router.post('/users', authMiddleware, checkPermission(PERMISSIONS.USERS_CREATE), logAction('create', 'users'), controller.createUser)
 
-//actualizar un usuario por el id
-router.put('/users/:id', authMiddleware, checkRole('admin'), logAction('update', 'users'), controller.updateUser)
-//eliminar un usuario por el id
-router.delete('/users/:id', authMiddleware, checkRole('admin'), logAction('delete', 'users'),controller.deleteUser)
+router.get('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_READ), logAction('read', 'users'), controller.getUser)
 
-//ruta para obtener bitacoras de usuarios
-router.get('/logs', authMiddleware, checkRole('admin', 'moderator'), logsReports)
+router.put('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_UPDATE), logAction('update', 'users'), controller.updateUser)
 
-//ruta para eliminar un log por el id
-router.delete('/logs/:id', authMiddleware, checkRole('admin', 'moderator'), deleteLogs)
+router.delete('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_DELETE), logAction('delete', 'users'), controller.deleteUser)
 
-//exportamos el router
+router.get('/logs', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), logsReports)
+
+router.delete('/logs/:id', authMiddleware, checkPermission(PERMISSIONS.LOGS_DELETE), deleteLogs)
+
 export default router;

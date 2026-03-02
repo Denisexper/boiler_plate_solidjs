@@ -1,5 +1,5 @@
-import { createContext, useContext, createSignal, onMount } from 'solid-js';
-import { api } from '../services/api';
+import { createContext, useContext, createSignal, onMount } from "solid-js";
+import { api } from "../services/api";
 
 const AuthContext = createContext();
 
@@ -7,18 +7,27 @@ export function AuthProvider(props) {
   const [user, setUser] = createSignal(null);
   const [loading, setLoading] = createSignal(true);
 
-  onMount(() => {
-    // Cargar usuario del token si existe
+  onMount(async () => {
     const token = api.getToken();
+    console.log("🔑 Token existe?", !!token);
+
     if (token) {
       try {
-        // Decodificar el token manualmente (simple base64 decode)
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser(payload);
+        console.log("📡 Haciendo petición a /me...");
+        const userData = await api.getMe();
+        console.log("✅ Respuesta de /me:", userData);
+        console.log("👤 Usuario:", userData.data);
+        console.log("🔐 Permisos:", userData.data?.permissions);
+
+        setUser(userData.data);
+        console.log("💾 Usuario guardado en state");
       } catch (error) {
-        console.error('Error decoding token:', error);
+        console.error("❌ Error fetching user data:", error);
         api.removeToken();
+        setUser(null);
       }
+    } else {
+      console.log("⚠️ No hay token");
     }
     setLoading(false);
   });
@@ -48,8 +57,13 @@ export function AuthProvider(props) {
     setUser(null);
   };
 
-  const isAdmin = () => user()?.role === 'admin';
-  const isModerator = () => user()?.role === 'moderator' || isAdmin();
+  const isAdmin = () => user()?.role === "admin";
+  const isModerator = () => user()?.role === "moderator" || isAdmin();
+
+  const hasPermission = (permission) => {
+    const userPermissions = user()?.permissions || [];
+    return userPermissions.includes(permission);
+  };
 
   const value = {
     user,
@@ -59,19 +73,18 @@ export function AuthProvider(props) {
     logout,
     isAdmin,
     isModerator,
+    hasPermission,
   };
 
   return (
-    <AuthContext.Provider value={value}>
-      {props.children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>
   );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }
