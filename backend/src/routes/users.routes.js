@@ -3,7 +3,7 @@ import { userController } from '../controllers/user.controller.js'
 import { authMiddleware } from '../middleware/auth.middleware.js'
 import { checkPermission } from '../middleware/role.middleware.js'
 import { logAction } from '../middleware/logger.middleware.js'
-import { logsReports, deleteLogs } from '../controllers/logs.controller.js' 
+import { logsReports, deleteLogs, getUserHistory } from '../controllers/logs.controller.js'
 import { PERMISSIONS } from '../db/seedRoles.js'
 
 const router = Router()
@@ -27,10 +27,13 @@ router.get('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_READ)
 
 router.put('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_UPDATE), logAction('update', 'users'), controller.updateUser)
 
-router.delete('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_DELETE), logAction('delete', 'users'), controller.deleteUser)
-
 router.get('/logs', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), logsReports)
 
 router.delete('/logs/:id', authMiddleware, checkPermission(PERMISSIONS.LOGS_DELETE), deleteLogs)
+
+// ✅ NUEVO: Obtener historial de un usuario específico
+router.get('/users/:userId/history', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), getUserHistory)
+
+router.patch('/users/:id/toggle-status', authMiddleware, checkPermission(PERMISSIONS.USERS_UPDATE), logAction('update', 'users'), controller.toggleUserStatus)
 
 export default router;

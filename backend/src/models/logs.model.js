@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose'
 
 //eschema para la bitacora (logs que se requiere)
-const logSchema = new Schema ({
+const logSchema = new Schema({
     user: {
         type: Schema.Types.ObjectId,
         ref: 'userModel'
@@ -23,6 +23,20 @@ const logSchema = new Schema ({
         type: String,
         default: null
     },
+    // ✅ NUEVO: Snapshot del objeto ANTES de la acción
+    dataBefore: {
+        type: Schema.Types.Mixed,
+        default: null
+    },
+    // ✅ NUEVO: Snapshot del objeto DESPUÉS de la acción
+    dataAfter: {
+        type: Schema.Types.Mixed,
+        default: null
+    },
+    // ✅ NUEVO: Lista de campos que cambiaron
+    changedFields: [{
+        type: String
+    }],
     details: {
         type: String
     },

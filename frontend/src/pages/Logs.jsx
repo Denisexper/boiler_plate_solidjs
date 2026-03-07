@@ -3,6 +3,7 @@ import { api } from "../services/api";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Layout from "../components/layout/Layout";
 import { useAuth } from "../context/AuthContext";
+import { showToast } from "../utils/toast";
 
 function Logs() {
   const auth = useAuth();
@@ -13,6 +14,10 @@ function Logs() {
   const [filterAction, setFilterAction] = createSignal("");
   const [filterResource, setFilterResource] = createSignal("");
   const [filterDate, setFilterDate] = createSignal("");
+
+  //filtros para ver cambios de los usuarios en los logs
+  const [showDetailModal, setShowDetailModal] = createSignal(false);
+  const [selectedLog, setSelectedLog] = createSignal(null);
 
   const applyFilters = () => {
     const f = {};
@@ -37,27 +42,42 @@ function Logs() {
     setFilters({});
   };
 
-  // ✅ AGREGAR esta función
+  const openLogDetail = (log) => {
+    setSelectedLog(log);
+    setShowDetailModal(true);
+  };
+
   const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar este log?")) return;
-    try {
-      await api.deleteLog(id);
-      refetch();
-    } catch (error) {
-      alert(error.message);
-    }
+    showToast.confirm(
+      "¿Eliminar este log? Esta acción no se puede deshacer.",
+      async () => {
+        try {
+          await api.deleteLog(id);
+          refetch();
+          showToast.success("Log eliminado correctamente");
+        } catch (error) {
+          showToast.error(error.message);
+        }
+      },
+    );
   };
 
   const actionColor = (action) => {
     const colors = {
-      login: "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400",
+      login:
+        "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400",
       logout: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-      create: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
-      update: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400",
+      create:
+        "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
+      update:
+        "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400",
       delete: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
       read: "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
     };
-    return colors[action] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+    return (
+      colors[action] ||
+      "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+    );
   };
 
   const statusColor = (code) => {
@@ -121,7 +141,7 @@ function Logs() {
 
             <div class="flex gap-3 mt-4">
               <button onClick={applyFilters} class="btn-primary">
-                Aplicar filtros
+                🔍 Buscar
               </button>
               <button onClick={clearFilters} class="btn-secondary">
                 Limpiar
@@ -160,7 +180,10 @@ function Logs() {
                       <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Fecha
                       </th>
-                      {/* ✅ COLUMNA PARA BOTÓN */}
+                      {/* ✅ Columna para botón "Ver" - siempre visible porque puede haber create/update/delete */}
+                      <th class="px-6 py-3"></th>
+
+                      {/* ✅ Columna para botón "Eliminar" - solo si tiene permiso */}
                       <Show when={auth.hasPermission("logs.delete")}>
                         <th class="px-6 py-3"></th>
                       </Show>
@@ -193,11 +216,17 @@ function Logs() {
                           <td class="px-6 py-4">
                             <Show
                               when={log.targetUserName || log.targetUser}
-                              fallback={<span class="text-xs text-gray-400 italic">-</span>}
+                              fallback={
+                                <span class="text-xs text-gray-400 italic">
+                                  -
+                                </span>
+                              }
                             >
                               <div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                  {log.targetUserName || log.targetUser?.name || "Usuario"}
+                                  {log.targetUserName ||
+                                    log.targetUser?.name ||
+                                    "Usuario"}
                                 </p>
                                 <Show when={log.targetUser?.email}>
                                   <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -217,7 +246,28 @@ function Logs() {
                           <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">
                             {new Date(log.createdAt).toLocaleString("es-ES")}
                           </td>
-                          {/* ✅ BOTÓN DE ELIMINAR */}
+                          {/* ✅ NUEVO: Botón Ver detalles */}
+                          <td class="px-6 py-4">
+                            <Show
+                              when={
+                                auth.hasPermission("logs.read") && // ✅ AGREGAR ESTO
+                                ["create", "update", "delete"].includes(
+                                  log.action,
+                                ) &&
+                                (log.dataBefore || log.dataAfter)
+                              }
+                            >
+                              <button
+                                onClick={() => openLogDetail(log)}
+                                class="text-xs px-3 py-1.5 rounded-md border border-blue-200 
+             dark:border-blue-500/30 text-blue-600 dark:text-blue-400
+             hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                              >
+                                👁️ Ver
+                              </button>
+                            </Show>
+                          </td>
+                          {/*BOTÓN DE ELIMINAR */}
                           <Show when={auth.hasPermission("logs.delete")}>
                             <td class="px-6 py-4">
                               <button
@@ -246,6 +296,205 @@ function Logs() {
           </div>
         </div>
       </Layout>
+      {/* ✅ MODAL DE DETALLE DEL LOG */}
+      <Show when={showDetailModal()}>
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+                rounded-xl w-full max-w-2xl shadow-xl"
+          >
+            {/* Header */}
+            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  Detalles del cambio
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {selectedLog()?.action === "create" && "✨ Usuario creado"}
+                  {selectedLog()?.action === "update" &&
+                    "✏️ Usuario actualizado"}
+                  {selectedLog()?.action === "delete" && "🗑️ Usuario eliminado"}
+                  {" • "}
+                  {new Date(selectedLog()?.createdAt).toLocaleString("es-ES")}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div class="p-6">
+              {/* Información del responsable */}
+              <div class="mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Realizado por:
+                </p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  {selectedLog()?.user?.name || "Sistema"}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {selectedLog()?.user?.email || ""}
+                </p>
+              </div>
+
+              {/* Usuario afectado */}
+              <div class="mb-6">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Usuario afectado:
+                </p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  {selectedLog()?.targetUserName || "Desconocido"}
+                </p>
+              </div>
+
+              {/* CREATE */}
+              <Show
+                when={
+                  selectedLog()?.action === "create" && selectedLog()?.dataAfter
+                }
+              >
+                <div class="bg-green-50 dark:bg-green-500/10 rounded-lg p-4 space-y-2">
+                  <p class="text-xs font-semibold text-green-700 dark:text-green-400 mb-3">
+                    Datos iniciales:
+                  </p>
+                  <Show when={selectedLog()?.dataAfter.name}>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Nombre:
+                      </span>
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedLog()?.dataAfter.name}
+                      </span>
+                    </div>
+                  </Show>
+                  <Show when={selectedLog()?.dataAfter.email}>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Email:
+                      </span>
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedLog()?.dataAfter.email}
+                      </span>
+                    </div>
+                  </Show>
+                  <Show when={selectedLog()?.dataAfter.role}>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Rol:
+                      </span>
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedLog()?.dataAfter.role}
+                      </span>
+                    </div>
+                  </Show>
+                </div>
+              </Show>
+
+              {/* UPDATE */}
+              <Show
+                when={
+                  selectedLog()?.action === "update" &&
+                  selectedLog()?.changedFields &&
+                  selectedLog()?.changedFields.length > 0
+                }
+              >
+                <div class="space-y-3">
+                  <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3">
+                    Campos modificados:
+                  </p>
+                  <For each={selectedLog()?.changedFields}>
+                    {(field) => (
+                      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          {field === "name" && "Nombre"}
+                          {field === "email" && "Email"}
+                          {field === "role" && "Rol"}
+                          {field === "isActive" && "Estado"}
+                        </p>
+                        <div class="flex items-center gap-3">
+                          <span class="text-sm text-red-600 dark:text-red-400 line-through flex-1">
+                            {field === "isActive"
+                              ? selectedLog()?.dataBefore?.[field]
+                                ? "Activo"
+                                : "Inactivo"
+                              : selectedLog()?.dataBefore?.[field] || "-"}
+                          </span>
+                          <span class="text-gray-400">→</span>
+                          <span class="text-sm text-green-600 dark:text-green-400 font-medium flex-1 text-right">
+                            {field === "isActive"
+                              ? selectedLog()?.dataAfter?.[field]
+                                ? "Activo"
+                                : "Inactivo"
+                              : selectedLog()?.dataAfter?.[field] || "-"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
+
+              {/* DELETE */}
+              <Show
+                when={
+                  selectedLog()?.action === "delete" &&
+                  selectedLog()?.dataBefore
+                }
+              >
+                <div class="bg-red-50 dark:bg-red-500/10 rounded-lg p-4 space-y-2">
+                  <p class="text-xs font-semibold text-red-700 dark:text-red-400 mb-3">
+                    Usuario eliminado:
+                  </p>
+                  <Show when={selectedLog()?.dataBefore.name}>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Nombre:
+                      </span>
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedLog()?.dataBefore.name}
+                      </span>
+                    </div>
+                  </Show>
+                  <Show when={selectedLog()?.dataBefore.email}>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Email:
+                      </span>
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedLog()?.dataBefore.email}
+                      </span>
+                    </div>
+                  </Show>
+                  <Show when={selectedLog()?.dataBefore.role}>
+                    <div class="flex justify-between">
+                      <span class="text-sm text-gray-600 dark:text-gray-400">
+                        Rol:
+                      </span>
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedLog()?.dataBefore.role}
+                      </span>
+                    </div>
+                  </Show>
+                </div>
+              </Show>
+            </div>
+
+            {/* Footer */}
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                class="btn-secondary w-full"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </Show>
     </ProtectedRoute>
   );
 }

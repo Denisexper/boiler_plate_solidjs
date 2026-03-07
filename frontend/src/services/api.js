@@ -155,6 +155,24 @@ class ApiService {
       method: 'DELETE'
     });
   }
+
+  // Obtener historial de un usuario en los logs
+  async getUserHistory(userId) {
+    return this.request(`/users/${userId}/history`);
+  }
+
+  // Activar/Desactivar usuario
+  async toggleUserStatus(id) {
+    return this.request(`/users/${id}/toggle-status`, {
+      method: 'PATCH'
+    });
+  }
+
+  //filtros de usuarios
+  async getUsers(filters = {}) {
+    const params = new URLSearchParams(filters).toString();
+    return this.request(`/users${params ? `?${params}` : ''}`);
+  }
 }
 
 export const api = new ApiService();

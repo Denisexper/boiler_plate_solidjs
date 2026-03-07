@@ -75,6 +75,13 @@ export class userController {
                 })
             }
 
+            //ver si el usuario esta activo 
+            if (!user.isActive) {
+                return res.status(403).json({
+                    msj: 'Usuario desactivado. Contacta al administrador.'
+                })
+            }
+
             const isvalidPass = await bcrypt.compare(password, user.password)
             if (!isvalidPass) {
                 return res.status(401).json({
@@ -250,9 +257,32 @@ export class userController {
     async getAll(req, res) {
 
         try {
+            //obtenemos parametros de filtro
+            const { search, role, isActive } = req.query;
+
+            // Construir filtro dinámico
+            const filter = {};
+
+            // Filtro por búsqueda (nombre o email)
+            if (search) {
+                filter.$or = [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            // Filtro por rol
+            if (role) {
+                filter.role = role;
+            }
+
+            // Filtro por estado
+            if (isActive !== undefined && isActive !== '') {
+                filter.isActive = isActive === 'true';
+            }
 
             //buscamos todos los registros en la db
-            const response = await userModel.find()
+            const response = await userModel.find(filter)
                 .populate('role')
                 .select('-passowrd') //para no mostrar la password
                 .sort({ createdAt: -1 }) //los ordenamos del mas reciente al mas viejo
@@ -349,20 +379,22 @@ export class userController {
                     new: true, runValidators: true //para ejecutar las validaciones que configuramos en el Schema que creamos
                 }
             )
+            const populatedUser = await userModel.findById(updateUser._id).populate('role');
 
             //si se crea correctamente responsemos
             res.status(200).json({
                 msj: 'usuario actualizado correctamente',
                 user: {
-                    id: updateUser._id,
-                    name: updateUser.name,
-                    email: updateUser.email,
-                    role: updateUser.role
+                    id: populatedUser._id,
+                    name: populatedUser.name,
+                    email: populatedUser.email,
+                    role: populatedUser.role?.name, // ✅ Nombre del rol
+                    roleId: populatedUser.role?._id,  // ✅ ID del rol
+                    isActive: populatedUser.isActive
                 }
-
             })
         } catch (error) {
-
+            console.log('error 500', error)
             res.status(500).json({
                 msj: 'error actualizando usuario',
                 error: error.message
@@ -430,40 +462,82 @@ export class userController {
     }
 
     // Obtener perfil del usuario autenticado (no requiere permisos especiales)
-async getMe(req, res) {
-    try {
-        // req.user viene del authMiddleware con todos los datos
-        const user = await userModel.findById(req.user.id)
-            .populate('role')
-            .select('-password'); // No enviar la contraseña
+    async getMe(req, res) {
+        try {
+            // req.user viene del authMiddleware con todos los datos
+            const user = await userModel.findById(req.user.id)
+                .populate('role')
+                .select('-password'); // No enviar la contraseña
 
-        if (!user) {
-            return res.status(404).json({
-                msj: 'usuario no encontrado'
+            if (!user) {
+                return res.status(404).json({
+                    msj: 'usuario no encontrado'
+                });
+            }
+
+            res.status(200).json({
+                msj: 'perfil obtenido',
+                data: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role.name,
+                    roleId: user.role._id,
+                    permissions: user.role.permissions,
+                    isActive: user.isActive,
+                    lastLogin: user.lastLogin,
+                    createdAt: user.createdAt
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                msj: 'error del servidor',
+                error: error.message
             });
         }
-
-        res.status(200).json({
-            msj: 'perfil obtenido',
-            data: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role.name,
-                roleId: user.role._id,
-                permissions: user.role.permissions,
-                isActive: user.isActive,
-                lastLogin: user.lastLogin,
-                createdAt: user.createdAt
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            msj: 'error del servidor',
-            error: error.message
-        });
     }
-}
+
+    // ✅ NUEVO: Activar/Desactivar usuario (en lugar de eliminar)
+    async toggleUserStatus(req, res) {
+        try {
+            const { id } = req.params;
+
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    msj: 'Id no válido'
+                });
+            }
+
+            const user = await userModel.findById(id).populate('role');
+            if (!user) {
+                return res.status(404).json({
+                    msj: 'Usuario no encontrado'
+                });
+            }
+
+            // Cambiar el estado
+            user.isActive = !user.isActive;
+            await user.save();
+
+            res.status(200).json({
+                msj: `Usuario ${user.isActive ? 'activado' : 'desactivado'} correctamente`,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    isActive: user.isActive,
+                    role: user.role?.name,
+                    roleId: user.role?._id
+                }
+            });
+        } catch (error) {
+            console.error('Error toggleUserStatus:', error);
+            res.status(500).json({
+                msj: 'Error al cambiar estado del usuario',
+                error: error.message
+            });
+        }
+    }
 
 
 }

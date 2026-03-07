@@ -1,34 +1,37 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { api } from '../services/api';
-import ProtectedRoute from '../components/ProtectedRoute';
-import Layout from '../components/layout/Layout';
-import { useAuth } from '../context/AuthContext';
+import { createSignal, createResource, Show, For } from "solid-js";
+import { api } from "../services/api";
+import ProtectedRoute from "../components/ProtectedRoute";
+import Layout from "../components/layout/Layout";
+import { useAuth } from "../context/AuthContext";
+import { showToast } from "../utils/toast";
 
 function Roles() {
   const auth = useAuth();
 
-  const [roles, { refetch: refetchRoles }] = createResource(() => api.getRoles());
-  const [permissions, { }] = createResource(() => api.getPermissions());
+  const [roles, { refetch: refetchRoles }] = createResource(() =>
+    api.getRoles(),
+  );
+  const [permissions, {}] = createResource(() => api.getPermissions());
 
   // Modal state
   const [showModal, setShowModal] = createSignal(false);
   const [editingRole, setEditingRole] = createSignal(null);
   const [modalLoading, setModalLoading] = createSignal(false);
-  const [modalError, setModalError] = createSignal('');
+  const [modalError, setModalError] = createSignal("");
 
   // Form state
-  const [formName, setFormName] = createSignal('');
-  const [formDisplayName, setFormDisplayName] = createSignal('');
-  const [formDescription, setFormDescription] = createSignal('');
+  const [formName, setFormName] = createSignal("");
+  const [formDisplayName, setFormDisplayName] = createSignal("");
+  const [formDescription, setFormDescription] = createSignal("");
   const [formPermissions, setFormPermissions] = createSignal([]);
 
   const openCreate = () => {
     setEditingRole(null);
-    setFormName('');
-    setFormDisplayName('');
-    setFormDescription('');
+    setFormName("");
+    setFormDisplayName("");
+    setFormDescription("");
     setFormPermissions([]);
-    setModalError('');
+    setModalError("");
     setShowModal(true);
   };
 
@@ -36,14 +39,25 @@ function Roles() {
     setEditingRole(role);
     setFormName(role.name);
     setFormDisplayName(role.displayName);
-    setFormDescription(role.description || '');
+    setFormDescription(role.description || "");
     setFormPermissions(role.permissions || []);
-    setModalError('');
+    setModalError("");
     setShowModal(true);
   };
 
   const handleDelete = async (id, name) => {
-    if (!confirm(`¿Eliminar el rol "${name}"?`)) return;
+    showToast.confirm(
+      `¿Eliminar el rol "${name}"? Esta acción no se puede deshacer.`,
+      async () => {
+        try {
+          await api.deleteRole(id);
+          refetch();
+          showToast.success("Rol eliminado correctamente");
+        } catch (error) {
+          showToast.error(error.message);
+        }
+      },
+    );
     try {
       await api.deleteRole(id);
       refetchRoles();
@@ -55,7 +69,7 @@ function Roles() {
   const togglePermission = (permission) => {
     const current = formPermissions();
     if (current.includes(permission)) {
-      setFormPermissions(current.filter(p => p !== permission));
+      setFormPermissions(current.filter((p) => p !== permission));
     } else {
       setFormPermissions([...current, permission]);
     }
@@ -64,22 +78,24 @@ function Roles() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setModalLoading(true);
-    setModalError('');
+    setModalError("");
 
     try {
       if (editingRole()) {
         await api.updateRole(editingRole()._id, {
           displayName: formDisplayName(),
           description: formDescription(),
-          permissions: formPermissions()
+          permissions: formPermissions(),
         });
+        showToast.success('Rol actualizado correctamente');
       } else {
         await api.createRole({
           name: formName(),
           displayName: formDisplayName(),
           description: formDescription(),
-          permissions: formPermissions()
+          permissions: formPermissions(),
         });
+        showToast.success('Rol creado correctamente');
       }
       setShowModal(false);
       refetchRoles();
@@ -92,7 +108,7 @@ function Roles() {
 
   const groupPermissionsByResource = () => {
     if (!permissions()) return {};
-    
+
     return permissions().data.reduce((acc, perm) => {
       if (!acc[perm.resource]) {
         acc[perm.resource] = [];
@@ -106,18 +122,22 @@ function Roles() {
     <ProtectedRoute>
       <Layout>
         <div class="p-8 max-w-6xl mx-auto">
-
           {/* Header */}
           <div class="flex justify-between items-center mb-8">
             <div>
-              <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Roles y Permisos</h1>
+              <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                Roles y Permisos
+              </h1>
               <p class="text-gray-500 dark:text-gray-400 mt-1">
                 Gestiona los roles del sistema y sus permisos
               </p>
             </div>
-            <button onClick={openCreate} class="btn-primary">
-              + Nuevo rol
-            </button>
+            {/* ✅ Solo mostrar si tiene permiso de crear */}
+            <Show when={auth.hasPermission("roles.create")}>
+              <button onClick={openCreate} class="btn-primary">
+                + Nuevo rol
+              </button>
+            </Show>
           </div>
 
           {/* Tabla */}
@@ -154,7 +174,7 @@ function Roles() {
                               {role.displayName}
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                              {role.description || 'Sin descripción'}
+                              {role.description || "Sin descripción"}
                             </p>
                           </div>
                         </td>
@@ -164,36 +184,58 @@ function Roles() {
                           </span>
                         </td>
                         <td class="px-6 py-4">
-                          <span class={`text-xs px-2 py-1 rounded-full ${
-                            role.isSystem 
-                              ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400'
-                              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400'
-                          }`}>
-                            {role.isSystem ? 'Sistema' : 'Personalizado'}
+                          <span
+                            class={`text-xs px-2 py-1 rounded-full ${
+                              role.isSystem
+                                ? "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400"
+                                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400"
+                            }`}
+                          >
+                            {role.isSystem ? "Sistema" : "Personalizado"}
                           </span>
                         </td>
-                        <td class="px-6 py-4">
-                          <div class="flex items-center gap-2 justify-end">
-                            <button
-                              onClick={() => openEdit(role)}
-                              class="text-xs px-3 py-1.5 rounded-md border border-gray-200 
-                                     dark:border-gray-700 text-gray-600 dark:text-gray-400
-                                     hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
-                            >
-                              Editar
-                            </button>
-                            <Show when={!role.isSystem}>
-                              <button
-                                onClick={() => handleDelete(role._id, role.displayName)}
-                                class="text-xs px-3 py-1.5 rounded-md border border-red-200
-                                       dark:border-red-500/30 text-red-600 dark:text-red-400
-                                       hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                        {/* ✅ Solo mostrar columna si tiene algún permiso de editar/eliminar */}
+                        <Show
+                          when={
+                            auth.hasPermission("roles.update") ||
+                            auth.hasPermission("roles.delete")
+                          }
+                        >
+                          <td class="px-6 py-4">
+                            <div class="flex items-center gap-2 justify-end">
+                              {/* ✅ Botón Editar solo si tiene permiso */}
+                              <Show when={auth.hasPermission("roles.update")}>
+                                <button
+                                  onClick={() => openEdit(role)}
+                                  class="text-xs px-3 py-1.5 rounded-md border border-gray-200 
+                 dark:border-gray-700 text-gray-600 dark:text-gray-400
+                 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                                >
+                                  Editar
+                                </button>
+                              </Show>
+
+                              {/* ✅ Botón Eliminar solo si tiene permiso Y no es rol del sistema */}
+                              <Show
+                                when={
+                                  auth.hasPermission("roles.delete") &&
+                                  !role.isSystem
+                                }
                               >
-                                Eliminar
-                              </button>
-                            </Show>
-                          </div>
-                        </td>
+                                <button
+                                  onClick={() =>
+                                    handleDelete(role._id, role.displayName)
+                                  }
+                                  class="text-xs px-3 py-1.5 rounded-md border border-red-200
+                 dark:border-red-500/30 text-red-600 dark:text-red-400
+                 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                >
+                                  Eliminar
+                                </button>
+                              </Show>
+                            </div>
+                          </td>
+                        </Show>
                       </tr>
                     )}
                   </For>
@@ -212,11 +254,13 @@ function Roles() {
         {/* Modal */}
         <Show when={showModal()}>
           <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
-                        rounded-xl w-full max-w-2xl shadow-xl my-8">
+            <div
+              class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+                        rounded-xl w-full max-w-2xl shadow-xl my-8"
+            >
               <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                  {editingRole() ? 'Editar rol' : 'Nuevo rol'}
+                  {editingRole() ? "Editar rol" : "Nuevo rol"}
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
@@ -275,7 +319,7 @@ function Roles() {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Permisos ({formPermissions().length} seleccionados)
                   </label>
-                  
+
                   <div class="border border-gray-200 dark:border-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
                     <For each={Object.entries(groupPermissionsByResource())}>
                       {([resource, perms]) => (
@@ -289,8 +333,12 @@ function Roles() {
                                 <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded">
                                   <input
                                     type="checkbox"
-                                    checked={formPermissions().includes(perm.value)}
-                                    onChange={() => togglePermission(perm.value)}
+                                    checked={formPermissions().includes(
+                                      perm.value,
+                                    )}
+                                    onChange={() =>
+                                      togglePermission(perm.value)
+                                    }
                                     class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-700"
                                   />
                                   <span class="text-sm text-gray-700 dark:text-gray-300">
@@ -310,8 +358,10 @@ function Roles() {
                 </div>
 
                 <Show when={modalError()}>
-                  <div class="bg-red-500/10 border border-red-500/30 text-red-600 
-                              dark:text-red-400 px-4 py-3 rounded-md text-sm">
+                  <div
+                    class="bg-red-500/10 border border-red-500/30 text-red-600 
+                              dark:text-red-400 px-4 py-3 rounded-md text-sm"
+                  >
                     {modalError()}
                   </div>
                 </Show>
@@ -329,14 +379,17 @@ function Roles() {
                     disabled={modalLoading()}
                     class="btn-primary flex-1 disabled:opacity-50"
                   >
-                    {modalLoading() ? 'Guardando...' : editingRole() ? 'Actualizar' : 'Crear'}
+                    {modalLoading()
+                      ? "Guardando..."
+                      : editingRole()
+                        ? "Actualizar"
+                        : "Crear"}
                   </button>
                 </div>
               </form>
             </div>
           </div>
         </Show>
-
       </Layout>
     </ProtectedRoute>
   );

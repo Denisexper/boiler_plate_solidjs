@@ -7,52 +7,66 @@ export function AuthProvider(props) {
   const [user, setUser] = createSignal(null);
   const [loading, setLoading] = createSignal(true);
 
+  // para logs solo en desarrollo
+  const log = (message, data) => {
+    if (import.meta.env.DEV) {
+      console.log(`[Auth] ${message}`, data || '');
+    }
+  };
+
   onMount(async () => {
     const token = api.getToken();
-    console.log("🔑 Token existe?", !!token);
 
-    if (token) {
-      try {
-        console.log("📡 Haciendo petición a /me...");
-        const userData = await api.getMe();
-        console.log("✅ Respuesta de /me:", userData);
-        console.log("👤 Usuario:", userData.data);
-        console.log("🔐 Permisos:", userData.data?.permissions);
-
-        setUser(userData.data);
-        console.log("💾 Usuario guardado en state");
-      } catch (error) {
-        console.error("❌ Error fetching user data:", error);
-        api.removeToken();
-        setUser(null);
-      }
-    } else {
-      console.log("⚠️ No hay token");
+    if (!token) {
+      log('No hay token, usuario no autenticado');
+      setLoading(false);
+      return; 
     }
-    setLoading(false);
+
+    try {
+      log('Cargando datos del usuario...');
+      const userData = await api.getMe();
+      setUser(userData.data);
+      log('Usuario cargado:', userData.data);
+    } catch (error) {
+      log('Error cargando usuario:', error.message);
+      // Token inválido o expirado
+      api.removeToken();
+      setUser(null);
+    } finally {
+      // finally asegura que loading siempre se desactive
+      setLoading(false);
+    }
   });
 
   const login = async (email, password) => {
     try {
+      log('Intentando login...');
       const data = await api.login(email, password);
       setUser(data.user);
-      return { success: true };
+      log('Login exitoso:', data.user);
+      return { success: true, user: data.user };
     } catch (error) {
+      log('Error en login:', error.message);
       return { success: false, error: error.message };
     }
   };
 
   const register = async (name, email, password) => {
     try {
+      log('Intentando registro...');
       const data = await api.register(name, email, password);
       setUser(data.newUser);
-      return { success: true };
+      log('Registro exitoso:', data.newUser);
+      return { success: true, user: data.newUser };
     } catch (error) {
+      log('Error en registro:', error.message);
       return { success: false, error: error.message };
     }
   };
 
   const logout = () => {
+    log('Cerrando sesión...');
     api.removeToken();
     setUser(null);
   };
@@ -62,8 +76,31 @@ export function AuthProvider(props) {
 
   const hasPermission = (permission) => {
     const userPermissions = user()?.permissions || [];
-    return userPermissions.includes(permission);
+    const has = userPermissions.includes(permission);
+    
+    if (import.meta.env.DEV && !has) {
+      console.log(`[Auth] Usuario no tiene permiso: ${permission}`);
+    }
+    
+    return has;
   };
+
+  const refreshUser = async () => {
+    if (!api.getToken()) return;
+    
+    try {
+      log('Refrescando datos del usuario...');
+      const userData = await api.getMe();
+      setUser(userData.data);
+      log('Usuario actualizado:', userData.data);
+      return { success: true };
+    } catch (error) {
+      log('Error refrescando usuario:', error.message);
+      return { success: false, error: error.message };
+    }
+  };
+
+  const isAuthenticated = () => !!user();
 
   const value = {
     user,
@@ -74,10 +111,14 @@ export function AuthProvider(props) {
     isAdmin,
     isModerator,
     hasPermission,
+    refreshUser,
+    isAuthenticated,
   };
 
   return (
-    <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>
+    <AuthContext.Provider value={value}>
+      {props.children}
+    </AuthContext.Provider>
   );
 }
 

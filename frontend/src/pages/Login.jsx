@@ -1,29 +1,32 @@
-import { createSignal } from 'solid-js';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate, A } from '@solidjs/router';
+import { createSignal } from "solid-js";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate, A } from "@solidjs/router";
+import { showToast } from "../utils/toast";
 
 function Login() {
-  const [email, setEmail] = createSignal('');
-  const [password, setPassword] = createSignal('');
-  const [error, setError] = createSignal('');
+  const [email, setEmail] = createSignal("");
+  const [password, setPassword] = createSignal("");
+  const [error, setError] = createSignal("");
   const [loading, setLoading] = createSignal(false);
-  
+
   const auth = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     const result = await auth.login(email(), password());
-    
+
     if (result.success) {
-      navigate('/dashboard');
+      navigate("/dashboard");
+      showToast.success(`¡Bienvenido, ${result.user.name}!`);
     } else {
       setError(result.error);
+      showToast.error(result.error);
     }
-    
+
     setLoading(false);
   };
 
@@ -72,13 +75,13 @@ function Login() {
               disabled={loading()}
               class="btn-primary w-full disabled:opacity-50"
             >
-              {loading() ? 'Iniciando sesión...' : 'Iniciar sesión'}
+              {loading() ? "Iniciando sesión..." : "Iniciar sesión"}
             </button>
           </form>
 
           <div class="mt-6 text-center">
             <p class="text-gray-400 text-sm">
-              ¿No tienes cuenta?{' '}
+              ¿No tienes cuenta?{" "}
               <A href="/register" class="text-white hover:underline">
                 Regístrate
               </A>
