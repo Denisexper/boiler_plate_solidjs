@@ -32,14 +32,8 @@ server.listen(port, () => {
 
 //configuracion base de datos
 mongoConnect().then(async () => {
-  // ✅ Solo ejecutar si NO hay roles
-  const rolesCount = await Role.countDocuments();
-
-  if (rolesCount === 0) {
-    console.log("🌱 Inicializando roles del sistema...");
-    await seedRoles();
-    console.log("✅ Roles creados correctamente");
-  }
+  //crear la migracion
+  seedRoles()
 });
 
 //inicializamos las rutas
