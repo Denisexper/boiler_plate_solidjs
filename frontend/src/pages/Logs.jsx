@@ -180,10 +180,10 @@ function Logs() {
                       <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Fecha
                       </th>
-                      {/* ✅ Columna para botón "Ver" - siempre visible porque puede haber create/update/delete */}
+                      {/* Columna para botón "Ver" - siempre visible porque puede haber create/update/delete */}
                       <th class="px-6 py-3"></th>
 
-                      {/* ✅ Columna para botón "Eliminar" - solo si tiene permiso */}
+                      {/* Columna para botón "Eliminar" - solo si tiene permiso */}
                       <Show when={auth.hasPermission("logs.delete")}>
                         <th class="px-6 py-3"></th>
                       </Show>
@@ -246,11 +246,11 @@ function Logs() {
                           <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">
                             {new Date(log.createdAt).toLocaleString("es-ES")}
                           </td>
-                          {/* ✅ NUEVO: Botón Ver detalles */}
+                          {/* NUEVO: Botón Ver detalles */}
                           <td class="px-6 py-4">
                             <Show
                               when={
-                                auth.hasPermission("logs.read") && // ✅ AGREGAR ESTO
+                                auth.hasPermission("logs.read") &&
                                 ["create", "update", "delete"].includes(
                                   log.action,
                                 ) &&
@@ -296,7 +296,7 @@ function Logs() {
           </div>
         </div>
       </Layout>
-      {/* ✅ MODAL DE DETALLE DEL LOG */}
+      {/* MODAL DE DETALLE DEL LOG */}
       <Show when={showDetailModal()}>
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div

@@ -18,7 +18,7 @@ router.post('/logout', authMiddleware, controller.logout)
 
 router.get('/me', authMiddleware, controller.getMe)
 
-// ✅ RUTAS CON PERMISOS
+// RUTAS CON PERMISOS
 router.get('/users', authMiddleware, checkPermission(PERMISSIONS.USERS_READ), controller.getAll)
 
 router.post('/users', authMiddleware, checkPermission(PERMISSIONS.USERS_CREATE), logAction('create', 'users'), controller.createUser)
@@ -31,7 +31,7 @@ router.get('/logs', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), logs
 
 router.delete('/logs/:id', authMiddleware, checkPermission(PERMISSIONS.LOGS_DELETE), deleteLogs)
 
-// ✅ NUEVO: Obtener historial de un usuario específico
+// Obtener historial de un usuario específico
 router.get('/users/:userId/history', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), getUserHistory)
 
 router.patch('/users/:id/toggle-status', authMiddleware, checkPermission(PERMISSIONS.USERS_UPDATE), logAction('update', 'users'), controller.toggleUserStatus)

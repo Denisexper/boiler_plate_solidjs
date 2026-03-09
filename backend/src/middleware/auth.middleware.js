@@ -25,7 +25,7 @@ export const authMiddleware = async (req, res, next) => {
             })
         }
 
-        // ✅ NUEVO: Cargar el rol y sus permisos
+        // Cargar el rol y sus permisos
         const userRole = await Role.findById(decode.roleId);
         
         if (!userRole) {
@@ -34,7 +34,7 @@ export const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // ✅ Agregar toda la información al request
+        // Agregar toda la información al request
         req.user = {
             id: decode.id,
             email: decode.email,

@@ -85,7 +85,7 @@ export const deleteLogs = async (req, res) => {
 
 }
 
-// ✅ NUEVO: Obtener historial de cambios de un usuario específico
+// Obtener historial de cambios de un usuario específico
 export const getUserHistory = async (req, res) => {
     try {
         const { userId } = req.params;

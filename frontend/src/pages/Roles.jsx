@@ -132,7 +132,7 @@ function Roles() {
                 Gestiona los roles del sistema y sus permisos
               </p>
             </div>
-            {/* ✅ Solo mostrar si tiene permiso de crear */}
+            {/* Solo mostrar si tiene permiso de crear */}
             <Show when={auth.hasPermission("roles.create")}>
               <button onClick={openCreate} class="btn-primary">
                 + Nuevo rol
@@ -194,7 +194,7 @@ function Roles() {
                             {role.isSystem ? "Sistema" : "Personalizado"}
                           </span>
                         </td>
-                        {/* ✅ Solo mostrar columna si tiene algún permiso de editar/eliminar */}
+                        {/* Solo mostrar columna si tiene algún permiso de editar/eliminar */}
                         <Show
                           when={
                             auth.hasPermission("roles.update") ||
@@ -203,7 +203,7 @@ function Roles() {
                         >
                           <td class="px-6 py-4">
                             <div class="flex items-center gap-2 justify-end">
-                              {/* ✅ Botón Editar solo si tiene permiso */}
+                              {/* Botón Editar solo si tiene permiso */}
                               <Show when={auth.hasPermission("roles.update")}>
                                 <button
                                   onClick={() => openEdit(role)}
@@ -215,7 +215,7 @@ function Roles() {
                                 </button>
                               </Show>
 
-                              {/* ✅ Botón Eliminar solo si tiene permiso Y no es rol del sistema */}
+                              {/* Botón Eliminar solo si tiene permiso Y no es rol del sistema */}
                               <Show
                                 when={
                                   auth.hasPermission("roles.delete") &&

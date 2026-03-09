@@ -52,7 +52,7 @@ function Sidebar() {
           Dashboard
         </A>
 
-        {/* ✅ CAMBIO: Mostrar según PERMISOS, no por rol */}
+        {/* Mostrar según PERMISOS, no por rol */}
         <Show when={auth.hasPermission('users.read') || auth.hasPermission('users.create') || auth.hasPermission('users.update')}>
           <div class="pt-4 pb-1">
             <p class="px-4 text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">
@@ -69,7 +69,7 @@ function Sidebar() {
           </A>
         </Show>
 
-        {/* ✅ Roles - Solo si tiene permiso */}
+        {/* Roles - Solo si tiene permiso */}
         <Show when={auth.hasPermission('roles.read')}>
           <A href="/roles" class={navLinkClass('/roles')}>
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -80,7 +80,7 @@ function Sidebar() {
           </A>
         </Show>
 
-        {/* ✅ Logs - Solo si tiene permiso */}
+        {/* Logs Solo si tiene permiso */}
         <Show when={auth.hasPermission('logs.read')}>
           <A href="/logs" class={navLinkClass('/logs')}>
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

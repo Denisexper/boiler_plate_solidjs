@@ -123,7 +123,7 @@ class ApiService {
     });
   }
 
-  // ✅ NUEVO: Roles
+  // Roles
   async getRoles() {
     return this.request('/roles');
   }

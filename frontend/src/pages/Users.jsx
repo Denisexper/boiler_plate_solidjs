@@ -10,7 +10,7 @@ function Users() {
   const auth = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Verificar si tiene permiso para ver usuarios
+  // Verificar si tiene permiso para ver usuarios
   if (!auth.hasPermission("users.read")) {
     navigate("/dashboard");
     return null;
@@ -106,7 +106,7 @@ function Users() {
     setFormName("");
     setFormEmail("");
     setFormPassword("");
-    // ✅ Buscar el rol "user" por defecto
+    // uscar el rol "user" por defecto
     const defaultRole = roles()?.data?.find((r) => r.name === "user");
     setFormRole(defaultRole?._id || "");
     setModalError("");
@@ -118,7 +118,7 @@ function Users() {
     setFormName(user.name);
     setFormEmail(user.email);
     setFormPassword("");
-    // ✅ Establecer el roleId del usuario
+    // Establecer el roleId del usuario
     setFormRole(user.role?._id || user.role);
     setModalError("");
     setShowModal(true);
@@ -161,7 +161,7 @@ function Users() {
         if (formName()) data.name = formName();
         if (formEmail()) data.email = formEmail();
         if (formPassword()) data.password = formPassword();
-        if (formRole()) data.role = formRole(); // ✅ Enviar roleId
+        if (formRole()) data.role = formRole(); // role id
         await api.updateUser(editingUser()._id, data);
         showToast.success('Usuario actualizado correctamente');
       } else {
@@ -169,7 +169,7 @@ function Users() {
           name: formName(),
           email: formEmail(),
           password: formPassword(),
-          role: formRole(), // ✅ Enviar roleId
+          role: formRole(), // role id
         });
         showToast.success('Usuario creado correctamente');
       }
@@ -183,7 +183,7 @@ function Users() {
     setModalLoading(false);
   };
 
-  // ✅ NUEVO: Función para obtener color según rol
+  // Función para obtener color según rol
   const roleColor = (roleName) => {
     if (roleName === "admin")
       return "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400";
@@ -192,7 +192,7 @@ function Users() {
     return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
   };
 
-  // ✅ NUEVO: Obtener el nombre del rol para mostrar
+  // Obtener el nombre del rol para mostrar
   const getRoleName = (user) => {
     if (typeof user.role === "string") return user.role;
     return user.role?.name || user.role?.displayName || "user";
@@ -212,7 +212,7 @@ function Users() {
                 Gestiona los usuarios del sistema
               </p>
             </div>
-            {/* ✅ Solo mostrar si tiene permiso de crear */}
+            {/* Solo mostrar si tiene permiso de crear */}
             <Show when={auth.hasPermission("users.create")}>
               <button onClick={openCreate} class="btn-primary">
                 + Nuevo usuario
@@ -311,7 +311,7 @@ function Users() {
                     <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Creado
                     </th>
-                    {/* ✅ AGREGAR logs.read */}
+                    {/* AGREGAR logs.read */}
                     <Show
                       when={
                         auth.hasPermission("users.update") ||
@@ -381,7 +381,7 @@ function Users() {
                                 Historial
                               </button>
                             </Show>
-                            {/* ✅ Botón Editar solo si tiene permiso */}
+                            {/* Botón Editar solo si tiene permiso */}
                             <Show when={auth.hasPermission("users.update")}>
                               <button
                                 onClick={() => openEdit(user)}
@@ -393,7 +393,7 @@ function Users() {
                               </button>
                             </Show>
 
-                            {/* ✅ Botón Eliminar solo si tiene permiso */}
+                            {/* Botón Eliminar solo si tiene permiso */}
                             <Show when={auth.hasPermission("users.update")}>
                               <button
                                 onClick={() => toggleStatus(user)}
@@ -494,7 +494,7 @@ function Users() {
                   />
                 </div>
 
-                {/* ✅ NUEVO: Dropdown de roles dinámico */}
+                {/* Dropdown de roles dinámico */}
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Rol
@@ -557,7 +557,7 @@ function Users() {
             </div>
           </div>
         </Show>
-        {/* ✅ MODAL DE HISTORIAL */}
+        {/* MODAL DE HISTORIAL */}
         <Show when={showHistoryModal()}>
           <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div
@@ -679,7 +679,7 @@ function Users() {
                                         {field === "isActive" && "Estado"}
                                       </p>
                                       <div class="flex items-center gap-2">
-                                        {/* ✅ ANTES - con formato para isActive */}
+                                        {/* ANTES - con formato para isActive */}
                                         <span class="text-sm text-red-600 dark:text-red-400 line-through">
                                           {field === "isActive"
                                             ? log.dataBefore?.[field]
@@ -688,7 +688,7 @@ function Users() {
                                             : log.dataBefore?.[field] || "-"}
                                         </span>
                                         <span class="text-gray-400">→</span>
-                                        {/* ✅ DESPUÉS - con formato para isActive */}
+                                        {/* DESPUÉS - con formato para isActive */}
                                         <span class="text-sm text-green-600 dark:text-green-400 font-medium">
                                           {field === "isActive"
                                             ? log.dataAfter?.[field]

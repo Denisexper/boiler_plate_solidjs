@@ -3,7 +3,7 @@ import { userModel } from "../models/user.model.js";
 
 export const logAction = (action, resource) => {
     return async (req, res, next) => {
-        // ✅ Capturar snapshot ANTES de la acción (para update/delete)
+        // Capturar snapshot ANTES de la acción (para update/delete)
         let dataBefore = null;
         let targetUser = null;
         let targetUserName = null;
@@ -15,7 +15,7 @@ export const logAction = (action, resource) => {
                     targetUser = user._id;
                     targetUserName = user.name;
 
-                    // ✅ Guardar snapshot completo (sin password)
+                    // Guardar snapshot completo (sin password)
                     dataBefore = {
                         name: user.name,
                         email: user.email,
@@ -48,7 +48,7 @@ export const logAction = (action, resource) => {
                         dataBefore: dataBefore
                     };
 
-                    // ✅ Para CREATE: guardar el usuario creado en dataAfter
+                    // Para CREATE: guardar el usuario creado en dataAfter
                     if (action === 'create' && data.newUser) {
                         logData.targetUser = data.newUser.id;
                         logData.targetUserName = data.newUser.name;
@@ -59,12 +59,12 @@ export const logAction = (action, resource) => {
                             roleId: data.newUser.roleId
                         };
                     }
-                    // ✅ Para UPDATE: guardar el usuario actualizado en dataAfter
+                    // Para UPDATE: guardar el usuario actualizado en dataAfter
                     else if (action === 'update' && data.user) {
                         logData.targetUser = data.user.id;
                         logData.targetUserName = data.user.name;
 
-                        // ✅ Construir dataAfter con el mismo formato que dataBefore
+                        // Construir dataAfter con el mismo formato que dataBefore
                         logData.dataAfter = {
                             name: data.user.name,
                             email: data.user.email,
@@ -73,7 +73,7 @@ export const logAction = (action, resource) => {
                             isActive: data.user.isActive
                         };
 
-                        // ✅ Calcular campos que cambiaron (ignorar roleId en la comparación)
+                        // Calcular campos que cambiaron (ignorar roleId en la comparación)
                         logData.changedFields = [];
                         if (dataBefore && logData.dataAfter) {
                             // Comparar solo campos relevantes (sin roleId)
@@ -89,13 +89,13 @@ export const logAction = (action, resource) => {
                             });
                         }
                     }
-                    // ✅ Para DELETE: solo guardar el before
+                    // Para DELETE: solo guardar el before
                     else if (action === 'delete' && data.deleteUser) {
                         logData.targetUser = data.deleteUser.id;
                         logData.targetUserName = data.deleteUser.name;
                         logData.dataAfter = null; // Fue eliminado
                     }
-                    // ✅ Para otros casos (read, etc)
+                    // Para otros casos (read, etc)
                     else if (targetUser) {
                         logData.targetUser = targetUser;
                         logData.targetUserName = targetUserName;

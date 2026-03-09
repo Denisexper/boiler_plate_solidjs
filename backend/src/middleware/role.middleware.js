@@ -9,7 +9,7 @@ export const checkPermission = (...requiredPermissions) => {
                 });
             }
 
-            // ✅ Usar permisos ya cargados del authMiddleware
+            // Usar permisos ya cargados del authMiddleware
             const userPermissions = req.user.permissions || [];
 
             // Verificar si el usuario tiene alguno de los permisos requeridos
@@ -46,7 +46,7 @@ export const checkRole = (...allowedRoles) => {
                 });
             }
 
-            // ✅ Usar el nombre del rol ya cargado
+            // Usar el nombre del rol ya cargado
             if (!allowedRoles.includes(req.user.role)) {
                 return res.status(403).json({
                     msj: 'No tienes permisos para acceder a este recurso'

@@ -23,17 +23,17 @@ const logSchema = new Schema({
         type: String,
         default: null
     },
-    // ✅ NUEVO: Snapshot del objeto ANTES de la acción
+    // Snapshot del objeto ANTES de la acción
     dataBefore: {
         type: Schema.Types.Mixed,
         default: null
     },
-    // ✅ NUEVO: Snapshot del objeto DESPUÉS de la acción
+    // Snapshot del objeto DESPUÉS de la acción
     dataAfter: {
         type: Schema.Types.Mixed,
         default: null
     },
-    // ✅ NUEVO: Lista de campos que cambiaron
+    // Lista de campos que cambiaron
     changedFields: [{
         type: String
     }],

@@ -19,7 +19,6 @@ const userSchema = new Schema({
         required: [true, 'La contraseña es obligatoria'],
         minlength: [6, 'La contraseña debe tener al menos 6 caracteres']
     },
-    // ✅ SOLO ESTO (sin enum)
     role: {
         type: Schema.Types.ObjectId,
         ref: 'Role',
