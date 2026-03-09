@@ -22,7 +22,7 @@ export class userController {
 
             const hasPassword = await bcrypt.hash(password, 10)
 
-            // ✅ CAMBIO: Buscar el rol "user" por defecto
+            // Buscar el rol "user" por defecto
             const userRole = await Role.findOne({ name: role || 'user' });
             if (!userRole) {
                 return res.status(400).json({
@@ -92,7 +92,7 @@ export class userController {
             user.lastLogin = new Date();
             await user.save();
 
-            // ✅ CAMBIO: Incluir roleId en el token
+            // Incluir roleId en el token
             const token = generateToken({
                 id: user._id,
                 email: user.email,
@@ -178,7 +178,7 @@ export class userController {
 
             const hasPassword = await bcrypt.hash(password, 10)
 
-            // ✅ CAMBIO: Buscar rol por nombre o por ID
+            // Buscar rol por nombre o por ID
             let roleDoc;
             if (mongoose.Types.ObjectId.isValid(role)) {
                 roleDoc = await Role.findById(role);
@@ -388,8 +388,8 @@ export class userController {
                     id: populatedUser._id,
                     name: populatedUser.name,
                     email: populatedUser.email,
-                    role: populatedUser.role?.name, // ✅ Nombre del rol
-                    roleId: populatedUser.role?._id,  // ✅ ID del rol
+                    role: populatedUser.role?.name,
+                    roleId: populatedUser.role?._id,
                     isActive: populatedUser.isActive
                 }
             })
@@ -497,7 +497,7 @@ export class userController {
         }
     }
 
-    // ✅ NUEVO: Activar/Desactivar usuario (en lugar de eliminar)
+    //Activar/Desactivar usuario (en lugar de eliminar)
     async toggleUserStatus(req, res) {
         try {
             const { id } = req.params;
