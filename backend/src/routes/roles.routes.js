@@ -2,30 +2,80 @@ import { Router } from 'express';
 import { RoleController } from '../controllers/role.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { checkPermission } from '../middleware/role.middleware.js';
-import { PERMISSIONS } from '../db/seedRoles.js';
+import { getAllPermissions } from '../controllers/permission.controller.js';
 
 const router = Router();
 const controller = new RoleController();
 
-// Todas las rutas requieren autenticación
-router.use(authMiddleware);
+// rutas con metadata
+const routes = [
+    {
+        method: 'GET',
+        path: '/',
+        permission: 'roles.read',
+        description: 'Listar roles',
+        handler: controller.getAll,
+        middlewares: []
+    },
+    {
+        method: 'GET',
+        path: '/permissions',
+        permission: 'roles.read',
+        description: 'Obtener permisos disponibles',
+        handler: getAllPermissions,
+        middlewares: []
+    },
+    {
+        method: 'GET',
+        path: '/:id',
+        permission: 'roles.read',
+        description: 'Obtener un rol',
+        handler: controller.getOne,
+        middlewares: []
+    },
+    {
+        method: 'POST',
+        path: '/',
+        permission: 'roles.create',
+        description: 'Crear nuevo rol',
+        handler: controller.create,
+        middlewares: []
+    },
+    {
+        method: 'PUT',
+        path: '/:id',
+        permission: 'roles.update',
+        description: 'Actualizar rol',
+        handler: controller.update,
+        middlewares: []
+    },
+    {
+        method: 'DELETE',
+        path: '/:id',
+        permission: 'roles.delete',
+        description: 'Eliminar rol',
+        handler: controller.delete,
+        middlewares: []
+    }
+];
 
-// Obtener todos los roles
-router.get('/', checkPermission(PERMISSIONS.ROLES_READ), controller.getAll);
+// registrar rutas automáticamente
+routes.forEach(route => {
+    const allMiddlewares = [
+        authMiddleware,
+        checkPermission(route.permission),
+        ...route.middlewares
+    ];
 
-// Obtener permisos disponibles
-router.get('/permissions', checkPermission(PERMISSIONS.ROLES_READ), controller.getPermissions);
+    router[route.method.toLowerCase()](
+        route.path,
+        ...allMiddlewares,
+        route.handler
+    );
+});
 
-// Obtener un rol
-router.get('/:id', checkPermission(PERMISSIONS.ROLES_READ), controller.getOne);
+// exportar metadata para auto-discovery
+export const roleRoutes = routes;
 
-// Crear rol
-router.post('/', checkPermission(PERMISSIONS.ROLES_CREATE), controller.create);
-
-// Actualizar rol
-router.put('/:id', checkPermission(PERMISSIONS.ROLES_UPDATE), controller.update);
-
-// Eliminar rol
-router.delete('/:id', checkPermission(PERMISSIONS.ROLES_DELETE), controller.delete);
-
+// exportar router para usar en server.js
 export default router;

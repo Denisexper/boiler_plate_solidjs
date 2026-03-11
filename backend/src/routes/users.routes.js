@@ -3,37 +3,79 @@ import { userController } from '../controllers/user.controller.js'
 import { authMiddleware } from '../middleware/auth.middleware.js'
 import { checkPermission } from '../middleware/role.middleware.js'
 import { logAction } from '../middleware/logger.middleware.js'
-import { logsReports, deleteLogs, getUserHistory } from '../controllers/logs.controller.js'
-import { PERMISSIONS } from '../db/seedRoles.js'
 
 const router = Router()
 const controller = new userController()
 
-//ruta del login y register (rutas publicas)
-router.post('/login', controller.login)
-router.post('/register', controller.register)
+//  rutas con metadata
+const routes = [
+    {
+        method: 'GET',
+        path: '/users',
+        permission: 'users.read',
+        description: 'Listar usuarios',
+        handler: controller.getAll,
+        middlewares: []
+    },
+    {
+        method: 'POST',
+        path: '/users',
+        permission: 'users.create',
+        description: 'Crear usuario',
+        handler: controller.createUser,
+        middlewares: [logAction('create', 'users')]
+    },
+    {
+        method: 'GET',
+        path: '/users/:id',
+        permission: 'users.read',
+        description: 'Obtener un usuario',
+        handler: controller.getUser,
+        middlewares: [logAction('read', 'users')]
+    },
+    {
+        method: 'PUT',
+        path: '/users/:id',
+        permission: 'users.update',
+        description: 'Actualizar usuario',
+        handler: controller.updateUser,
+        middlewares: [logAction('update', 'users')]
+    },
+    {
+        method: 'PATCH',
+        path: '/users/:id/toggle-status',
+        permission: 'users.update',
+        description: 'Activar/Desactivar usuario',
+        handler: controller.toggleUserStatus,
+        middlewares: [logAction('update', 'users')]
+    },
+    {
+        method: 'GET',
+        path: '/users/:userId/history',
+        permission: 'logs.read',
+        description: 'Ver historial de cambios del usuario',
+        handler: controller.getUserHistory,
+        middlewares: []
+    }
+];
 
-//ruta protegida logout
-router.post('/logout', authMiddleware, controller.logout)
+// registrar rutas automáticamente
+routes.forEach(route => {
+    const allMiddlewares = [
+        authMiddleware,
+        checkPermission(route.permission),
+        ...route.middlewares
+    ];
 
-router.get('/me', authMiddleware, controller.getMe)
+    router[route.method.toLowerCase()](
+        route.path,
+        ...allMiddlewares,
+        route.handler
+    );
+});
 
-// RUTAS CON PERMISOS
-router.get('/users', authMiddleware, checkPermission(PERMISSIONS.USERS_READ), controller.getAll)
+// exportar metadata para auto-discovery
+export const userRoutes = routes;
 
-router.post('/users', authMiddleware, checkPermission(PERMISSIONS.USERS_CREATE), logAction('create', 'users'), controller.createUser)
-
-router.get('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_READ), logAction('read', 'users'), controller.getUser)
-
-router.put('/users/:id', authMiddleware, checkPermission(PERMISSIONS.USERS_UPDATE), logAction('update', 'users'), controller.updateUser)
-
-router.get('/logs', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), logsReports)
-
-router.delete('/logs/:id', authMiddleware, checkPermission(PERMISSIONS.LOGS_DELETE), deleteLogs)
-
-// Obtener historial de un usuario específico
-router.get('/users/:userId/history', authMiddleware, checkPermission(PERMISSIONS.LOGS_READ), getUserHistory)
-
-router.patch('/users/:id/toggle-status', authMiddleware, checkPermission(PERMISSIONS.USERS_UPDATE), logAction('update', 'users'), controller.toggleUserStatus)
-
+// exportar router para usar en server.js
 export default router;
