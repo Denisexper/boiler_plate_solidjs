@@ -223,7 +223,7 @@ touch .env
 **Contenido del archivo `backend/.env`:**
 ```env
 # Puerto del servidor
-PORT=4000
+PORT=3000
 
 # Conexión a MongoDB
 MONGO_URI=mongodb://localhost:27017/boilerplate
@@ -231,7 +231,7 @@ MONGO_URI=mongodb://localhost:27017/boilerplate
 # MONGO_URI=mongodb+srv://usuario:password@cluster.mongodb.net/boilerplate
 
 # Secret para JWT (genera uno único y seguro)
-JWT_SECRET=tu_secreto_super_seguro_aqui_cambiar_en_produccion
+JWT_SECRET=clave_secreta_here
 
 # Entorno (development | production)
 NODE_ENV=development
