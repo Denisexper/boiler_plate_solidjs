@@ -1,5 +1,7 @@
 import { Role } from '../models/role.model.js';
 import { PERMISSIONS } from '../db/seedRoles.js';
+import mongoose from 'mongoose';
+import { userModel } from '../models/user.model.js'
 
 export class RoleController {
     
@@ -144,6 +146,12 @@ export class RoleController {
     async delete(req, res) {
         try {
             const { id } = req.params;
+
+            if(!mongoose.Types.ObjectId.isValid(id)){
+                return res.status(403).json({
+                    msj: 'id invalido'
+                })
+            }
 
             const role = await Role.findById(id);
             if (!role) {

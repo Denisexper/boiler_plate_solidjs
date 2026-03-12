@@ -226,7 +226,7 @@ function Roles() {
           </div>
         </div>
 
-        {/* ✅ MODAL PRINCIPAL: Crear/Editar Rol */}
+        {/* Modal para Crear/Editar Rol */}
         <Show when={showModal()}>
           <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div
@@ -290,7 +290,7 @@ function Roles() {
                   />
                 </div>
 
-                {/* ✅ NUEVA SECCIÓN: Vista previa de permisos */}
+                {/* Vista previa de permisos */}
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Permisos ({formPermissions().length} seleccionados)
@@ -352,7 +352,7 @@ function Roles() {
           </div>
         </Show>
 
-        {/* ✅ MODAL SECUNDARIO: Selector de permisos (PANTALLA COMPLETA) */}
+        {/* Modal secundario Selector de permisos (PANTALLA COMPLETA) */}
         <Show when={showPermissionsModal()}>
           <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
