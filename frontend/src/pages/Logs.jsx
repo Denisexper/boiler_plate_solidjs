@@ -4,6 +4,8 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Layout from "../components/layout/Layout";
 import { useAuth } from "../context/AuthContext";
 import { showToast } from "../utils/toast";
+import DateRangePicker from "../components/DateRangePicker";
+import { format } from "date-fns";
 
 function Logs() {
   const auth = useAuth();
@@ -13,7 +15,8 @@ function Logs() {
 
   const [filterAction, setFilterAction] = createSignal("");
   const [filterResource, setFilterResource] = createSignal("");
-  const [filterDate, setFilterDate] = createSignal("");
+  const [filterStartDate, setFilterStartDate] = createSignal(null);
+  const [filterEndDate, setFilterEndDate] = createSignal(null);
 
   //filtros para ver cambios de los usuarios en los logs
   const [showDetailModal, setShowDetailModal] = createSignal(false);
@@ -24,10 +27,13 @@ function Logs() {
     if (filterAction()) f.action = filterAction();
     if (filterResource()) f.resource = filterResource();
 
-    if (filterDate()) {
-      const [year, month, day] = filterDate().split("-");
-      const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+    if (filterStartDate() && filterEndDate()) {
+      const startOfDay = new Date(filterStartDate());
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(filterEndDate());
+      endOfDay.setHours(23, 59, 59, 999);
+
       f.startDate = startOfDay.toISOString();
       f.endDate = endOfDay.toISOString();
     }
@@ -38,7 +44,8 @@ function Logs() {
   const clearFilters = () => {
     setFilterAction("");
     setFilterResource("");
-    setFilterDate("");
+    setFilterStartDate("");
+    setFilterEndDate("");
     setFilters({});
   };
 
@@ -60,6 +67,11 @@ function Logs() {
         }
       },
     );
+  };
+
+  const handleDateChange = ({ startDate, endDate }) => {
+    setFilterStartDate(startDate);
+    setFilterEndDate(endDate);
   };
 
   const actionColor = (action) => {
@@ -130,12 +142,11 @@ function Logs() {
                 <option value="logs">Logs</option>
               </select>
 
-              <input
-                type="date"
-                class="input-field"
-                placeholder="Buscar por fecha"
-                value={filterDate()}
-                onInput={(e) => setFilterDate(e.target.value)}
+              <DateRangePicker
+                startDate={filterStartDate()}
+                endDate={filterEndDate()}
+                onDateChange={handleDateChange}
+                onApply={applyFilters}
               />
             </div>
 
