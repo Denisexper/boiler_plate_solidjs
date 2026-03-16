@@ -22,6 +22,9 @@ function Logs() {
   const [showDetailModal, setShowDetailModal] = createSignal(false);
   const [selectedLog, setSelectedLog] = createSignal(null);
 
+  const [showExportMenu, setShowExportMenu] = createSignal(false);
+  const [exporting, setExporting] = createSignal(false);
+
   const applyFilters = () => {
     const f = {};
     if (filterAction()) f.action = filterAction();
@@ -47,6 +50,60 @@ function Logs() {
     setFilterStartDate("");
     setFilterEndDate("");
     setFilters({});
+  };
+
+  // Funcion para exportar excel
+  const handleExportExcel = async () => {
+    setExporting(true);
+    setShowExportMenu(false);
+
+    try {
+      const currentFilters = filters();
+      const blob = await api.exportLogsToExcel(currentFilters);
+
+      // Crear link de descarga
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `logs_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      showToast.success("Reporte Excel generado correctamente");
+    } catch (error) {
+      showToast.error(error.message || "Error al generar reporte Excel");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Función para exportar a PDF
+  const handleExportPDF = async () => {
+    setExporting(true);
+    setShowExportMenu(false);
+
+    try {
+      const currentFilters = filters();
+      const blob = await api.exportLogsToPDF(currentFilters);
+
+      // Crear link de descarga
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `logs_${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      showToast.success("Reporte PDF generado correctamente");
+    } catch (error) {
+      showToast.error(error.message || "Error al generar reporte PDF");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const openLogDetail = (log) => {
@@ -157,6 +214,47 @@ function Logs() {
               <button onClick={clearFilters} class="btn-secondary">
                 Limpiar
               </button>
+
+              <Show when={auth.hasPermission("logs.export")}>
+                <div class="relative">
+                  <button
+                    onClick={() => setShowExportMenu(!showExportMenu())}
+                    disabled={exporting()}
+                    class="btn-secondary flex items-center gap-2"
+                  >
+                    <span>📥</span>
+                    <span>{exporting() ? "Exportando..." : "Exportar"}</span>
+                    <span class="text-xs">▼</span>
+                  </button>
+
+                  {/* Dropdown menu */}
+                  <Show when={showExportMenu()}>
+                    <div
+                      class="absolute top-full left-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+                                rounded-lg shadow-xl z-50 min-w-[150px]"
+                    >
+                      <button
+                        onClick={handleExportExcel}
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
+                               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
+                               flex items-center gap-2 rounded-t-lg"
+                      >
+                        <span>📊</span>
+                        <span>Excel</span>
+                      </button>
+                      <button
+                        onClick={handleExportPDF}
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
+                               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
+                               flex items-center gap-2 rounded-b-lg"
+                      >
+                        <span>📄</span>
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </Show>
+                </div>
+              </Show>
             </div>
           </div>
 
@@ -226,7 +324,11 @@ function Logs() {
                           </td>
                           <td class="px-6 py-4">
                             <Show
-                              when={log.targetUserName || log.targetUser}
+                              when={
+                                log.targetUserName ||
+                                log.targetUser ||
+                                log.action === "logout"
+                              }
                               fallback={
                                 <span class="text-xs text-gray-400 italic">
                                   -
@@ -235,13 +337,23 @@ function Logs() {
                             >
                               <div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                  {log.targetUserName ||
-                                    log.targetUser?.name ||
-                                    "Usuario"}
+                                  {log.action === "logout"
+                                    ? log.user?.name
+                                    : log.targetUserName ||
+                                      log.targetUser?.name ||
+                                      "Usuario"}
                                 </p>
-                                <Show when={log.targetUser?.email}>
+                                <Show
+                                  when={
+                                    log.action === "logout"
+                                      ? log.user?.email
+                                      : log.targetUser?.email
+                                  }
+                                >
                                   <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {log.targetUser.email}
+                                    {log.action === "logout"
+                                      ? log.user?.email
+                                      : log.targetUser?.email}
                                   </p>
                                 </Show>
                               </div>

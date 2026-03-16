@@ -12,6 +12,9 @@ import {
   startOfWeek,
   endOfWeek,
   isBefore,
+  isAfter,
+  subDays,
+  startOfToday,
 } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -38,6 +41,7 @@ function DateRangePicker(props) {
   };
 
   const handleDayClick = (day) => {
+    if (isAfter(day, startOfToday())) return;
     const currentStart = tempStartDate();
     const currentEnd = tempEndDate();
 
@@ -88,7 +92,7 @@ function DateRangePicker(props) {
   const applyDateRange = () => {
     const start = tempStartDate();
     const end = tempEndDate();
-    
+
     if (start && end) {
       props.onDateChange({
         startDate: start,
@@ -107,21 +111,19 @@ function DateRangePicker(props) {
   };
 
   const applyPreset = (preset) => {
-    const today = new Date();
-    let start, end;
+    const today = startOfToday();
+    let start,
+      end = today;
 
     switch (preset) {
       case "today":
         start = today;
-        end = today;
         break;
       case "week":
-        start = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        end = today;
+        start = subDays(today, 7);
         break;
       case "month":
-        start = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-        end = today;
+        start = subMonths(today, 1);
         break;
     }
 
@@ -146,7 +148,7 @@ function DateRangePicker(props) {
   const getSelectionMessage = () => {
     const start = tempStartDate();
     const end = tempEndDate();
-    
+
     if (!start) {
       return "📍 Selecciona fecha de inicio";
     } else if (!end) {
@@ -242,23 +244,48 @@ function DateRangePicker(props) {
           <div class="grid grid-cols-7 gap-1">
             <For each={getMonthDays(currentMonth())}>
               {(day) => {
+                const start = tempStartDate();
+                const end = tempEndDate();
+                const today = startOfToday();
+
                 const isCurrentMonth = isSameMonth(day, currentMonth());
-                const isStart = isDayStart(day);
-                const isEnd = isDayEnd(day);
-                const isInRange = isDayInRange(day);
+                const isFuture = isAfter(day, today);
+
+                // Un día está deshabilitado si NO es del mes actual O si es FUTURO
+                const isDisabled = !isCurrentMonth || isFuture;
+
+                const isStart = start && isSameDay(day, start);
+                const isEnd = end && isSameDay(day, end);
+                const isInRange =
+                  start && end && isWithinInterval(day, { start, end });
 
                 return (
                   <button
                     type="button"
-                    onClick={() => isCurrentMonth && handleDayClick(day)}
-                    disabled={!isCurrentMonth}
+                    onClick={() => !isDisabled && handleDayClick(day)}
+                    disabled={isDisabled}
                     class={`
-                      p-2 text-xs rounded-md transition-colors
-                      ${!isCurrentMonth ? "text-gray-300 dark:text-gray-700 cursor-not-allowed" : ""}
-                      ${isCurrentMonth && !isInRange && !isStart && !isEnd ? "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800" : ""}
-                      ${isInRange && !isStart && !isEnd ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400" : ""}
-                      ${isStart || isEnd ? "bg-blue-600 text-white font-semibold" : ""}
-                    `}
+          p-2 text-xs rounded-md transition-all duration-200
+          ${
+            isDisabled
+              ? "text-gray-300 dark:text-gray-700 cursor-not-allowed"
+              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }
+          
+          /* RESALTADO DE INICIO O FIN: Esta es la clase que te falta ver */
+          ${
+            (isStart || isEnd) && !isDisabled
+              ? "bg-blue-600 text-white font-bold shadow-sm scale-110 z-10"
+              : ""
+          }
+          
+          /* RESALTADO DEL RANGO (entre inicio y fin) */
+          ${
+            isInRange && !isStart && !isEnd && !isDisabled
+              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 rounded-none"
+              : ""
+          }
+        `}
                   >
                     {format(day, "d")}
                   </button>

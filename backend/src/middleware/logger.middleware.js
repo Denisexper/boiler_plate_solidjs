@@ -42,7 +42,6 @@ export const logAction = (action, resource) => {
                         action,
                         resource,
                         details: `${req.method} ${req.originalUrl}`,
-                        ipAddress: req.ip,
                         userAgent: req.get('user-agent'),
                         statusCode: res.statusCode,
                         dataBefore: dataBefore

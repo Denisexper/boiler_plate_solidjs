@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:4000/api';
+const API_URL = "http://localhost:4000/api";
 
 class ApiService {
   constructor() {
@@ -6,22 +6,22 @@ class ApiService {
   }
 
   getToken() {
-    return localStorage.getItem('token');
+    return localStorage.getItem("token");
   }
 
   setToken(token) {
-    localStorage.setItem('token', token);
+    localStorage.setItem("token", token);
   }
 
   removeToken() {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
   }
 
   async request(endpoint, options = {}) {
     const token = this.getToken();
 
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     };
@@ -35,20 +35,20 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.msj || 'Error en la petición');
+        throw new Error(data.msj || "Error en la petición");
       }
 
       return data;
     } catch (error) {
-      console.error('API Error:', error);
+      console.error("API Error:", error);
       throw error;
     }
   }
 
   // Auth
   async login(email, password) {
-    const data = await this.request('/login', {
-      method: 'POST',
+    const data = await this.request("/login", {
+      method: "POST",
       body: JSON.stringify({ email, password }),
     });
 
@@ -60,12 +60,12 @@ class ApiService {
   }
 
   async getMe() {
-    return this.request('/me');
+    return this.request("/me");
   }
 
-  async register(name, email, password, role = 'user') {
-    const data = await this.request('/register', {
-      method: 'POST',
+  async register(name, email, password, role = "user") {
+    const data = await this.request("/register", {
+      method: "POST",
       body: JSON.stringify({ name, email, password, role }),
     });
 
@@ -77,21 +77,21 @@ class ApiService {
   }
 
   async logout() {
-    return this.request('/logout', {
-      method: 'POST'
+    return this.request("/logout", {
+      method: "POST",
     });
   }
 
   // Users
   async getUsers() {
-    return this.request('/users');
+    return this.request("/users");
   }
 
   async createUser(userData) {
-    return this.request('/users', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    })
+    return this.request("/users", {
+      method: "POST",
+      body: JSON.stringify(userData),
+    });
   }
 
   async getUser(id) {
@@ -100,32 +100,76 @@ class ApiService {
 
   async updateUser(id, userData) {
     return this.request(`/users/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(userData),
     });
   }
 
   async deleteUser(id) {
     return this.request(`/users/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   // Logs
   async getLogs(filters = {}) {
     const params = new URLSearchParams(filters).toString();
-    return this.request(`/logs${params ? `?${params}` : ''}`);
+    return this.request(`/logs${params ? `?${params}` : ""}`);
   }
 
   async deleteLog(id) {
     return this.request(`/logs/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
+  }
+
+  async exportLogsToExcel(filters = {}) {
+    const token = this.getToken();
+    const params = new URLSearchParams(filters).toString();
+
+    const response = await fetch(
+      `${this.baseURL}/logs/reports/excel${params ? `?${params}` : ""}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Error al generar reporte Excel");
+    }
+
+    // Retornar el blob para descarga
+    return response.blob();
+  }
+
+  async exportLogsToPDF(filters = {}) {
+    const token = this.getToken();
+    const params = new URLSearchParams(filters).toString();
+
+    const response = await fetch(
+      `${this.baseURL}/logs/reports/pdf${params ? `?${params}` : ""}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Error al generar reporte PDF");
+    }
+
+    // Retornar el blob para descarga
+    return response.blob();
   }
 
   // Roles
   async getRoles() {
-    return this.request('/roles');
+    return this.request("/roles");
   }
 
   async getRole(id) {
@@ -133,27 +177,26 @@ class ApiService {
   }
 
   async getPermissions() {
-    return this.request('/roles/permissions');
+    return this.request("/roles/permissions");
   }
 
-
   async createRole(roleData) {
-    return this.request('/roles', {
-      method: 'POST',
-      body: JSON.stringify(roleData)
+    return this.request("/roles", {
+      method: "POST",
+      body: JSON.stringify(roleData),
     });
   }
 
   async updateRole(id, roleData) {
     return this.request(`/roles/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(roleData)
+      method: "PUT",
+      body: JSON.stringify(roleData),
     });
   }
 
   async deleteRole(id) {
     return this.request(`/roles/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
   }
 
@@ -165,14 +208,14 @@ class ApiService {
   // Activar/Desactivar usuario
   async toggleUserStatus(id) {
     return this.request(`/users/${id}/toggle-status`, {
-      method: 'PATCH'
+      method: "PATCH",
     });
   }
 
   //filtros de usuarios
   async getUsers(filters = {}) {
     const params = new URLSearchParams(filters).toString();
-    return this.request(`/users${params ? `?${params}` : ''}`);
+    return this.request(`/users${params ? `?${params}` : ""}`);
   }
 }
 
