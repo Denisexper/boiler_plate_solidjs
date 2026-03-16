@@ -3,7 +3,7 @@ import { toast } from "solid-sonner";
 export const showToast = {
   success: (message, options = {}) => {
     toast.success(message, {
-      duration: 3000,
+      duration: 1000,
       ...options
     });
   },

@@ -1,4 +1,9 @@
-import { createContext, useContext, createSignal, onMount } from "solid-js";
+import {
+  createContext,
+  useContext,
+  createSignal,
+  createEffect,
+} from "solid-js";
 import { api } from "../services/api";
 
 const AuthContext = createContext();
@@ -6,12 +11,16 @@ const AuthContext = createContext();
 export function AuthProvider(props) {
   const [user, setUser] = createSignal(null);
   const [loading, setLoading] = createSignal(true);
+  const [initialized, setInitialized] = createSignal(false);
 
-  onMount(async () => {
+  createEffect(async () => {
+    if (initialized()) return;
+
     const token = api.getToken();
 
     if (!token) {
       setLoading(false);
+      setInitialized(true);
       return;
     }
 
@@ -19,12 +28,12 @@ export function AuthProvider(props) {
       const userData = await api.getMe();
       setUser(userData.data);
     } catch (error) {
-      // Token inválido o expirado
+      console.error("Error al verificar token:", error);
       api.removeToken();
       setUser(null);
     } finally {
-      // finally asegura que loading siempre se desactive
       setLoading(false);
+      setInitialized(true);
     }
   });
 
@@ -48,9 +57,15 @@ export function AuthProvider(props) {
     }
   };
 
-  const logout = () => {
-    api.removeToken();
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch (error) {
+      console.error("Error en logout:", error);
+    } finally {
+      api.removeToken();
+      setUser(null);
+    }
   };
 
   const isAdmin = () => user()?.role === "admin";
@@ -89,7 +104,9 @@ export function AuthProvider(props) {
   };
 
   return (
-    <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>
+    <AuthContext.Provider value={value}>
+      {props.children}
+    </AuthContext.Provider>
   );
 }
 

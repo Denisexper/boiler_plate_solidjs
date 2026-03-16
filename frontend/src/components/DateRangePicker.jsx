@@ -41,52 +41,32 @@ function DateRangePicker(props) {
   };
 
   const handleDayClick = (day) => {
-    if (isAfter(day, startOfToday())) return;
+    const today = startOfToday();
+    if (isAfter(day, today)) return;
+
     const currentStart = tempStartDate();
     const currentEnd = tempEndDate();
 
-    // Si ya hay un rango completo, resetear y empezar de nuevo
     if (currentStart && currentEnd) {
       setTempStartDate(day);
       setTempEndDate(null);
       return;
     }
 
-    // Si no hay inicio, establecer inicio
     if (!currentStart) {
       setTempStartDate(day);
       setTempEndDate(null);
       return;
     }
 
-    // Si hay inicio pero no fin
     if (currentStart && !currentEnd) {
       if (isBefore(day, currentStart)) {
-        // Si selecciona fecha anterior, hacer SWAP
         setTempEndDate(currentStart);
         setTempStartDate(day);
       } else {
-        // Si selecciona fecha posterior, establecer como fin
         setTempEndDate(day);
       }
     }
-  };
-
-  const isDayInRange = (day) => {
-    const start = tempStartDate();
-    const end = tempEndDate();
-    if (!start || !end) return false;
-    return isWithinInterval(day, { start, end });
-  };
-
-  const isDayStart = (day) => {
-    const start = tempStartDate();
-    return start && isSameDay(day, start);
-  };
-
-  const isDayEnd = (day) => {
-    const end = tempEndDate();
-    return end && isSameDay(day, end);
   };
 
   const applyDateRange = () => {
@@ -244,48 +224,50 @@ function DateRangePicker(props) {
           <div class="grid grid-cols-7 gap-1">
             <For each={getMonthDays(currentMonth())}>
               {(day) => {
-                const start = tempStartDate();
-                const end = tempEndDate();
-                const today = startOfToday();
+                // ✅ Calcular estado dentro del For
+                const getState = () => {
+                  const start = tempStartDate();
+                  const end = tempEndDate();
+                  const today = startOfToday();
 
-                const isCurrentMonth = isSameMonth(day, currentMonth());
-                const isFuture = isAfter(day, today);
+                  const isCurrentMonth = isSameMonth(day, currentMonth());
+                  const isFuture = isAfter(day, today);
+                  const isDisabled = !isCurrentMonth || isFuture;
+                  const isStart = start && isSameDay(day, start);
+                  const isEnd = end && isSameDay(day, end);
+                  const isInRange =
+                    start && end && isWithinInterval(day, { start, end });
 
-                // Un día está deshabilitado si NO es del mes actual O si es FUTURO
-                const isDisabled = !isCurrentMonth || isFuture;
-
-                const isStart = start && isSameDay(day, start);
-                const isEnd = end && isSameDay(day, end);
-                const isInRange =
-                  start && end && isWithinInterval(day, { start, end });
+                  return { isDisabled, isStart, isEnd, isInRange };
+                };
 
                 return (
                   <button
                     type="button"
-                    onClick={() => !isDisabled && handleDayClick(day)}
-                    disabled={isDisabled}
+                    onClick={() => {
+                      const state = getState();
+                      if (!state.isDisabled) handleDayClick(day);
+                    }}
+                    disabled={getState().isDisabled}
                     class={`
-          p-2 text-xs rounded-md transition-all duration-200
-          ${
-            isDisabled
-              ? "text-gray-300 dark:text-gray-700 cursor-not-allowed"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-          }
-          
-          /* RESALTADO DE INICIO O FIN: Esta es la clase que te falta ver */
-          ${
-            (isStart || isEnd) && !isDisabled
-              ? "bg-blue-600 text-white font-bold shadow-sm scale-110 z-10"
-              : ""
-          }
-          
-          /* RESALTADO DEL RANGO (entre inicio y fin) */
-          ${
-            isInRange && !isStart && !isEnd && !isDisabled
-              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 rounded-none"
-              : ""
-          }
-        `}
+            p-2 text-xs rounded-md transition-colors
+            ${getState().isDisabled ? "opacity-30 cursor-not-allowed text-gray-400" : ""}
+            ${!getState().isDisabled && !getState().isStart && !getState().isEnd && !getState().isInRange ? "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800" : ""}
+          `}
+                    style={{
+                      ...(getState().isStart || getState().isEnd
+                        ? {
+                            background: "#2563eb",
+                            color: "white",
+                            "font-weight": "bold",
+                          }
+                        : getState().isInRange
+                          ? {
+                              background: "#dbeafe",
+                              color: "#1e40af",
+                            }
+                          : {}),
+                    }}
                   >
                     {format(day, "d")}
                   </button>
