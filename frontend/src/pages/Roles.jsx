@@ -5,22 +5,26 @@ import Layout from "../components/layout/Layout";
 import { useAuth } from "../context/AuthContext";
 import { showToast } from "../utils/toast";
 import PermissionSelector from "../components/PermissionSelector";
-import PermissionBadges from "../components/PermissionBadges";  // ✅ NUEVO IMPORT
+import PermissionBadges from "../components/PermissionBadges";
+import Pagination from "../components/Pagination";
 
 function Roles() {
   const auth = useAuth();
 
-  const [roles, { refetch: refetchRoles }] = createResource(() =>
-    api.getRoles(),
+  // Paginación
+  const [currentPage, setCurrentPage] = createSignal(1);
+  const [limit] = createSignal(10);
+
+  const [roles, { refetch: refetchRoles }] = createResource(
+    () => ({ page: currentPage(), limit: limit() }),
+    (params) => api.getRoles(params),
   );
-  
-  const [availablePermissions] = createResource(() => 
-    api.getPermissions()
-  );
+
+  const [availablePermissions] = createResource(() => api.getPermissions());
 
   // Modal state
   const [showModal, setShowModal] = createSignal(false);
-  const [showPermissionsModal, setShowPermissionsModal] = createSignal(false);  // ✅ NUEVO
+  const [showPermissionsModal, setShowPermissionsModal] = createSignal(false);
   const [editingRole, setEditingRole] = createSignal(null);
   const [modalLoading, setModalLoading] = createSignal(false);
   const [modalError, setModalError] = createSignal("");
@@ -78,7 +82,7 @@ function Roles() {
           description: formDescription(),
           permissions: formPermissions(),
         });
-        showToast.success('Rol actualizado correctamente');
+        showToast.success("Rol actualizado correctamente");
       } else {
         await api.createRole({
           name: formName(),
@@ -86,7 +90,7 @@ function Roles() {
           description: formDescription(),
           permissions: formPermissions(),
         });
-        showToast.success('Rol creado correctamente');
+        showToast.success("Rol creado correctamente");
       }
       setShowModal(false);
       refetchRoles();
@@ -95,6 +99,10 @@ function Roles() {
     }
 
     setModalLoading(false);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -217,11 +225,13 @@ function Roles() {
                 </tbody>
               </table>
 
-              <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-800">
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Total: {roles()?.total || 0} roles
-                </p>
-              </div>
+              <Show when={roles()?.pagination}>
+                <Pagination
+                  currentPage={currentPage()}
+                  totalPages={roles().pagination.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </Show>
             </Show>
           </div>
         </div>
@@ -295,18 +305,22 @@ function Roles() {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Permisos ({formPermissions().length} seleccionados)
                   </label>
-                  
+
                   {/* Vista previa compacta con badges */}
                   <Show when={availablePermissions()}>
-                    <div class="mb-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg 
-                                bg-gray-50 dark:bg-gray-900/50 min-h-[60px]">
-                      <PermissionBadges 
-                        permissions={formPermissions()} 
-                        availablePermissions={availablePermissions()?.permissions || {}}
+                    <div
+                      class="mb-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg 
+                                bg-gray-50 dark:bg-gray-900/50 min-h-[60px]"
+                    >
+                      <PermissionBadges
+                        permissions={formPermissions()}
+                        availablePermissions={
+                          availablePermissions()?.permissions || {}
+                        }
                       />
                     </div>
                   </Show>
-                  
+
                   {/* Botón para abrir modal grande */}
                   <button
                     type="button"
@@ -355,8 +369,10 @@ function Roles() {
         {/* Modal secundario Selector de permisos (PANTALLA COMPLETA) */}
         <Show when={showPermissionsModal()}>
           <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
-                        rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
+            <div
+              class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
+                        rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl"
+            >
               {/* Header */}
               <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                 <div>
@@ -364,7 +380,10 @@ function Roles() {
                     Seleccionar permisos
                   </h3>
                   <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    Para el rol: <span class="font-medium">{formDisplayName() || formName() || 'nuevo rol'}</span>
+                    Para el rol:{" "}
+                    <span class="font-medium">
+                      {formDisplayName() || formName() || "nuevo rol"}
+                    </span>
                   </p>
                 </div>
                 <button
@@ -374,27 +393,31 @@ function Roles() {
                   ✕
                 </button>
               </div>
-              
+
               {/* Body con scroll */}
               <div class="flex-1 overflow-y-auto p-6">
                 <Show when={availablePermissions.loading}>
                   <div class="flex items-center justify-center h-64">
                     <div class="text-center">
                       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p class="text-gray-500 dark:text-gray-400">Cargando permisos disponibles...</p>
+                      <p class="text-gray-500 dark:text-gray-400">
+                        Cargando permisos disponibles...
+                      </p>
                     </div>
                   </div>
                 </Show>
 
                 <Show when={availablePermissions()}>
                   <PermissionSelector
-                    availablePermissions={availablePermissions()?.permissions || {}}
+                    availablePermissions={
+                      availablePermissions()?.permissions || {}
+                    }
                     selectedPermissions={formPermissions()}
                     onPermissionsChange={setFormPermissions}
                   />
                 </Show>
               </div>
-              
+
               {/* Footer */}
               <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
                 <div class="flex gap-3">
@@ -411,7 +434,9 @@ function Roles() {
                     class="btn-primary flex-1 flex items-center justify-center gap-2"
                   >
                     <span>✓</span>
-                    <span>Aplicar selección ({formPermissions().length} permisos)</span>
+                    <span>
+                      Aplicar selección ({formPermissions().length} permisos)
+                    </span>
                   </button>
                 </div>
               </div>

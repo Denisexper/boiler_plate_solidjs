@@ -1,30 +1,33 @@
 import mongoose, { mongo } from "mongoose";
 import { Log } from "../models/logs.model.js";
-
 export const logsReports = async (req, res) => {
   try {
-    //obtemos la informacion por el body
-    const { user, action, resource, startDate, endDate } = req.query; //query porque estamos obteniendo logs y no estamos creando ningun objeto
+    // ✅ NUEVO: Agregar page y limit
+    const {
+      user,
+      action,
+      resource,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 10,
+    } = req.query;
 
-    //filtramos la data que enviaremos en el log
+    // Filtramos la data
     const filter = {};
-
     if (user) filter.user = user;
     if (action) filter.action = action;
     if (resource) filter.resource = resource;
+
     if (startDate || endDate) {
       filter.createdAt = {};
-
       if (startDate) {
-        // Asegurarnos de que la fecha de inicio sea válida
         const start = new Date(startDate);
         if (!isNaN(start.getTime())) {
           filter.createdAt.$gte = start;
         }
       }
-
       if (endDate) {
-        // Asegurarnos de que la fecha de fin sea válida
         const end = new Date(endDate);
         if (!isNaN(end.getTime())) {
           filter.createdAt.$lte = end;
@@ -32,26 +35,43 @@ export const logsReports = async (req, res) => {
       }
     }
 
-    //buscamos la lista de los logs
-    const logs = await Log.find(filter)
-      .select("-__v") //eliminamos esta propiedad del objeto
-      .populate("user", "name email role")
-      .populate("targetUser", "name email role") //hacer el join con el usuario y nos muestre sus campos no solo el id
-      .sort({ createdAt: -1 }) //ordenamos del mas reciente al mas viejo
-      .limit(100); //limite de objetos de 100
+    // Calcular paginación
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    //respondemos con la data que nos manda mongo
+    //  Consulta con paginación + conteo total
+    const [logs, totalRecords] = await Promise.all([
+      Log.find(filter)
+        .select("-__v")
+        .populate("user", "name email")
+        .populate("targetUser", "name email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      Log.countDocuments(filter),
+    ]);
+
+    // Calcular metadatos
+    const totalPages = Math.ceil(totalRecords / limitNum);
+
+    // Respuesta con paginación
     res.status(200).json({
-      msj:
-        logs.length === 0
-          ? "lista de logs vacia"
-          : "logs obtenidos correctamente",
-      total: logs.length,
       data: logs,
+      total: totalRecords, // Mantener retrocompatibilidad
+      pagination: {
+        currentPage: pageNum,
+        totalPages: totalPages,
+        totalRecords: totalRecords,
+        limit: limitNum,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+      },
     });
   } catch (error) {
+    console.error("Error en logsReports:", error);
     res.status(500).json({
-      msj: "error obteniendo logs",
+      msj: "Error al obtener logs",
       error: error.message,
     });
   }

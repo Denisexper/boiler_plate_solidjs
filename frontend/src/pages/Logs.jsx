@@ -5,13 +5,20 @@ import Layout from "../components/layout/Layout";
 import { useAuth } from "../context/AuthContext";
 import { showToast } from "../utils/toast";
 import DateRangePicker from "../components/DateRangePicker";
-import { format } from "date-fns";
+import Pagination from "../components/Pagination";
 
 function Logs() {
   const auth = useAuth();
 
+  //paginacion
+  const [currentPage, setCurrentPage] = createSignal(1);
+  const [limit] = createSignal(10); // Registros por página
+
   const [filters, setFilters] = createSignal({});
-  const [logs, { refetch }] = createResource(filters, (f) => api.getLogs(f));
+  const [logs, { refetch }] = createResource(
+    () => ({ ...filters(), page: currentPage(), limit: limit() }),
+    (params) => api.getLogs(params),
+  );
 
   const [filterAction, setFilterAction] = createSignal("");
   const [filterResource, setFilterResource] = createSignal("");
@@ -41,7 +48,12 @@ function Logs() {
       f.endDate = endOfDay.toISOString();
     }
 
+    setCurrentPage(1);
     setFilters(f);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const clearFilters = () => {
@@ -410,11 +422,13 @@ function Logs() {
                 </table>
               </div>
 
-              <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-800">
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Total: {logs()?.total || 0} registros
-                </p>
-              </div>
+              <Show when={logs()?.pagination}>
+                <Pagination
+                  currentPage={currentPage()}
+                  totalPages={logs().pagination.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </Show>
             </Show>
           </div>
         </div>

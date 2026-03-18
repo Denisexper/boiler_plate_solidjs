@@ -9,13 +9,8 @@ function Sidebar() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    try {
-      await api.logout();
-    } catch (error) {
-      console.error('Error en logout:', error);
-    }
-    auth.logout();
-    navigate('/login');
+    await auth.logout();
+    navigate('/login')
   };
 
   const navLinkClass = (path) =>

@@ -250,8 +250,8 @@ export class userController {
   //obtener todos los usuarios
   async getAll(req, res) {
     try {
-      //obtenemos parametros de filtro
-      const { search, role, isActive } = req.query;
+      //obtenemos parametros de filtro y paginación
+      const { search, role, isActive, page = 1, limit = 10 } = req.query;
 
       // Construir filtro dinámico
       const filter = {};
@@ -274,21 +274,42 @@ export class userController {
         filter.isActive = isActive === "true";
       }
 
-      //buscamos todos los registros en la db
-      const response = await userModel
-        .find(filter)
-        .populate("role")
-        .select("-passowrd") //para no mostrar la password
-        .sort({ createdAt: -1 }); //los ordenamos del mas reciente al mas viejo
+      //Paginación
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const skip = (pageNum - 1) * limitNum;
+
+      //Consulta con paginación
+      const [users, totalRecords] = await Promise.all([
+        userModel
+          .find(filter)
+          .populate("role")
+          .select("-password")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limitNum),
+        userModel.countDocuments(filter),
+      ]);
+
+      //Calcular metadatos
+      const totalPages = Math.ceil(totalRecords / limitNum);
 
       //respondemos la peticion
       res.status(200).json({
         msj:
-          response.length === 0
+          users.length === 0
             ? "lista de usuarios vacia"
             : "usuarios obtenidos correctamente",
-        total: response.length, //paginacion
-        data: response,
+        total: totalRecords,
+        data: users,
+        pagination: {
+          currentPage: pageNum,
+          totalPages: totalPages,
+          totalRecords: totalRecords,
+          limit: limitNum,
+          hasNextPage: pageNum < totalPages,
+          hasPrevPage: pageNum > 1,
+        },
       });
     } catch (error) {
       res.status(500).json({

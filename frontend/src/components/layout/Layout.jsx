@@ -1,12 +1,10 @@
-import Sidebar from './Sidebar';
+import Sidebar from "./Sidebar";
 
 function Layout(props) {
   return (
-    <div class="flex min-h-screen bg-gray-50 dark:bg-black">
+    <div class="flex h-screen overflow-hidden bg-gray-50 dark:bg-black">
       <Sidebar />
-      <main class="flex-1 overflow-auto">
-        {props.children}
-      </main>
+      <main class="flex-1 overflow-y-auto">{props.children}</main>
     </div>
   );
 }

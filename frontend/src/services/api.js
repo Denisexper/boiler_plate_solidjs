@@ -82,9 +82,10 @@ class ApiService {
     });
   }
 
-  // Users
-  async getUsers() {
-    return this.request("/users");
+  // Users actualizado para paginacion
+  async getUsers(filters = {}) {
+    const params = new URLSearchParams(filters).toString();
+    return this.request(`/users${params ? `?${params}` : ""}`);
   }
 
   async createUser(userData) {
@@ -168,8 +169,9 @@ class ApiService {
   }
 
   // Roles
-  async getRoles() {
-    return this.request("/roles");
+  async getRoles(params = {}) {
+    const queryParams = new URLSearchParams(params).toString();
+    return this.request(`/roles${queryParams ? `?${queryParams}` : ""}`);
   }
 
   async getRole(id) {

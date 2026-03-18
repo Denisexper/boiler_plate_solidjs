@@ -5,6 +5,7 @@ import Layout from "../components/layout/Layout";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "@solidjs/router";
 import { showToast } from "../utils/toast";
+import Pagination from "../components/Pagination";
 
 function Users() {
   const auth = useAuth();
@@ -15,6 +16,10 @@ function Users() {
     navigate("/dashboard");
     return null;
   }
+
+  //paginacion
+  const [currentPage, setCurrentPage] = createSignal(1);
+  const [limit] = createSignal(10);
 
   const [searchInput, setSearchInput] = createSignal("");
   const [roleInput, setRoleInput] = createSignal("");
@@ -27,11 +32,11 @@ function Users() {
     isActive: "",
   });
 
-  const [refetchTrigger, setRefetchTrigger] = createSignal(0);
   const [users, { refetch }] = createResource(
     () => ({
-      trigger: refetchTrigger(),
       ...appliedFilters(),
+      page: currentPage(),
+      limit: limit(),
     }),
     (params) => {
       const filters = {};
@@ -40,6 +45,8 @@ function Users() {
       if (params.isActive !== "" && params.isActive !== undefined) {
         filters.isActive = params.isActive;
       }
+      filters.page = params.page;
+      filters.limit = params.limit;
       return api.getUsers(filters);
     },
   );
@@ -65,9 +72,9 @@ function Users() {
     () => selectedUser(),
     async (user) => {
       if (!user) return null;
-      
+
       const result = await api.getUserHistory(user._id);
-      
+
       return result;
     },
   );
@@ -85,7 +92,7 @@ function Users() {
       role: roleInput(),
       isActive: statusInput(),
     });
-    setRefetchTrigger((prev) => prev + 1);
+    setCurrentPage(1);
   };
 
   // Limpiar filtros
@@ -98,7 +105,11 @@ function Users() {
       role: "",
       isActive: "",
     });
-    setRefetchTrigger((prev) => prev + 1);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const openCreate = () => {
@@ -142,11 +153,13 @@ function Users() {
         try {
           await api.toggleUserStatus(user._id);
           refetch();
-          showToast.success(`Usuario ${action === 'desactivar' ? 'desactivado' : 'activado'} correctamente`);
+          showToast.success(
+            `Usuario ${action === "desactivar" ? "desactivado" : "activado"} correctamente`,
+          );
         } catch (error) {
           showToast.error(error.message);
         }
-      }
+      },
     );
   };
 
@@ -163,7 +176,7 @@ function Users() {
         if (formPassword()) data.password = formPassword();
         if (formRole()) data.role = formRole(); // role id
         await api.updateUser(editingUser()._id, data);
-        showToast.success('Usuario actualizado correctamente');
+        showToast.success("Usuario actualizado correctamente");
       } else {
         await api.createUser({
           name: formName(),
@@ -171,7 +184,7 @@ function Users() {
           password: formPassword(),
           role: formRole(), // role id
         });
-        showToast.success('Usuario creado correctamente');
+        showToast.success("Usuario creado correctamente");
       }
       setShowModal(false);
       refetch();
@@ -414,11 +427,14 @@ function Users() {
                 </tbody>
               </table>
 
-              <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-800">
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Total: {users()?.total || 0} usuarios
-                </p>
-              </div>
+              {/* Paginación */}
+              <Show when={users()?.pagination}>
+                <Pagination
+                  currentPage={currentPage()}
+                  totalPages={users().pagination.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </Show>
             </Show>
           </div>
         </div>
