@@ -65,25 +65,33 @@ function Logs() {
   };
 
   // Funcion para exportar excel
-  const handleExportExcel = async () => {
+  const handleExportExcel = async (exportAll = true) => {
     setExporting(true);
     setShowExportMenu(false);
 
     try {
-      const currentFilters = filters();
+      const currentFilters = {
+        ...filters(),
+        exportAll: exportAll.toString(),
+        page: exportAll ? undefined : currentPage(),
+        limit: exportAll ? undefined : limit(),
+      };
+
       const blob = await api.exportLogsToExcel(currentFilters);
 
       // Crear link de descarga
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `logs_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.download = `logs_${exportAll ? "completo" : "pagina-" + currentPage()}_${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      showToast.success("Reporte Excel generado correctamente");
+      showToast.success(
+        `Reporte Excel generado: ${exportAll ? logs()?.pagination?.totalRecords || 0 : logs()?.data?.length || 0} registros`,
+      );
     } catch (error) {
       showToast.error(error.message || "Error al generar reporte Excel");
     } finally {
@@ -92,25 +100,33 @@ function Logs() {
   };
 
   // Función para exportar a PDF
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (exportAll = true) => {
     setExporting(true);
     setShowExportMenu(false);
 
     try {
-      const currentFilters = filters();
+      const currentFilters = {
+        ...filters(),
+        exportAll: exportAll.toString(),
+        page: exportAll ? undefined : currentPage(),
+        limit: exportAll ? undefined : limit(),
+      };
+
       const blob = await api.exportLogsToPDF(currentFilters);
 
       // Crear link de descarga
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `logs_${new Date().toISOString().split("T")[0]}.pdf`;
+      a.download = `logs_${exportAll ? "completo" : "pagina-" + currentPage()}_${new Date().toISOString().split("T")[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      showToast.success("Reporte PDF generado correctamente");
+      showToast.success(
+        `Reporte PDF generado: ${exportAll ? logs()?.pagination?.totalRecords || 0 : logs()?.data?.length || 0} registros`,
+      );
     } catch (error) {
       showToast.error(error.message || "Error al generar reporte PDF");
     } finally {
@@ -239,30 +255,75 @@ function Logs() {
                     <span class="text-xs">▼</span>
                   </button>
 
-                  {/* Dropdown menu */}
+                  {/* Dropdown menu mejorado */}
                   <Show when={showExportMenu()}>
                     <div
                       class="absolute top-full left-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
-                                rounded-lg shadow-xl z-50 min-w-[150px]"
+                    rounded-lg shadow-xl z-50 min-w-[300px]"
                     >
-                      <button
-                        onClick={handleExportExcel}
-                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
-                               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
-                               flex items-center gap-2 rounded-t-lg"
-                      >
-                        <span>📊</span>
-                        <span>Excel</span>
-                      </button>
-                      <button
-                        onClick={handleExportPDF}
-                        class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
-                               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
-                               flex items-center gap-2 rounded-b-lg"
-                      >
-                        <span>📄</span>
-                        <span>PDF</span>
-                      </button>
+                      {/* Sección Excel */}
+                      <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                          📊 Excel
+                        </p>
+                        <button
+                          onClick={() => handleExportExcel(false)}
+                          class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 
+                   hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-md mb-1"
+                        >
+                          <div class="flex justify-between items-center">
+                            <span>Página actual</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                              ({logs()?.data?.length || 0} registros)
+                            </span>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleExportExcel(true)}
+                          class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 
+                   hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-md"
+                        >
+                          <div class="flex justify-between items-center">
+                            <span>Todos los filtrados</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                              ({logs()?.pagination?.totalRecords || 0}{" "}
+                              registros)
+                            </span>
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* Sección PDF */}
+                      <div class="px-3 py-2">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                          📄 PDF
+                        </p>
+                        <button
+                          onClick={() => handleExportPDF(false)}
+                          class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 
+                   hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-md mb-1"
+                        >
+                          <div class="flex justify-between items-center">
+                            <span>Página actual</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                              ({logs()?.data?.length || 0} registros)
+                            </span>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleExportPDF(true)}
+                          class="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 
+                   hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-md"
+                        >
+                          <div class="flex justify-between items-center">
+                            <span>Todos los filtrados</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                              ({logs()?.pagination?.totalRecords || 0}{" "}
+                              registros)
+                            </span>
+                          </div>
+                        </button>
+                      </div>
                     </div>
                   </Show>
                 </div>
